@@ -1,10 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="190" height="480" viewBox="0 0 190 480">
-<!-- 1999 Broadway: grey-green glass with pale stone bands, its face folded down the middle -->
+<!-- 1999 Broadway: grey-green glass, its face folded down the middle. Flat faces only: the tool draws the windows. -->
 <path d="M22,470 L22,40 L96,16 L168,40 L168,470 Z" fill="#6f9a92"/>
 <path d="M22,470 L22,40 L96,16 L96,470 Z" fill="#4f7a74"/>
-<g fill="#e4e0d2">
-<rect x="22" y="60" width="146" height="8"/><rect x="22" y="100" width="146" height="8"/><rect x="22" y="140" width="146" height="8"/><rect x="22" y="180" width="146" height="8"/><rect x="22" y="220" width="146" height="8"/><rect x="22" y="260" width="146" height="8"/><rect x="22" y="300" width="146" height="8"/><rect x="22" y="340" width="146" height="8"/><rect x="22" y="380" width="146" height="8"/><rect x="22" y="420" width="146" height="8"/>
-</g>
-<rect x="92" y="16" width="8" height="454" fill="#e4e0d2"/>
-<rect x="22" y="446" width="146" height="24" fill="#3a4a48"/>
 </svg>

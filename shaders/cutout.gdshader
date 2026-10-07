@@ -49,7 +49,12 @@ void fragment() {
 	vec4 c = texture(tex, UV);
 	if (chunk > 0.0) {
 		vec2 cell = texel * chunk;
-		c = textureGrad(tex, (floor(UV / cell) + 0.5) * cell, dFdx(UV), dFdy(UV));
+		// Crisp blocks only while a block is bigger than a pixel on screen. Smaller than that,
+		// picking blocks one by one turns rows of windows into crawling lines, so the art is
+		// left to blend smoothly.
+		if (cell.y > fwidth(UV).y * 1.6) {
+			c = textureGrad(tex, (floor(UV / cell) + 0.5) * cell, dFdx(UV), dFdy(UV));
+		}
 	}
 	vec3 col = mix(paper, c.rgb, smoothstep(0.35, 0.65, c.a));
 	if (card < 0.5) {

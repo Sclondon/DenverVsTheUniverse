@@ -317,9 +317,11 @@ that carried on round the ring by itself.
   Seasons, Wells Fargo "Cash Register", Republic Plaza, 707 17th, 555 17th, 1144 Fifteenth, 1999
   Broadway, 1801 California. Filler is capped well below them.
 - **Where the art comes from.** For five of the towers the outline, faces and colours are taken
-  from the photo and repainted as flat-faced pixel art with drawn window panes. Four Seasons,
-  1144 Fifteenth and 1999 Broadway are drawn by hand, as is everything else, and pixelated the
-  same way (`tools/cut_buildings.gd`). Which photo crop is 707 17th and which is 555 17th is a
+  from the photo and repainted as flat-faced pixel art. Four Seasons, 1144 Fifteenth and 1999 Broadway are drawn by
+  hand as flat faces. All eight then get the same painted windows: separate square panes, spaced
+  apart and low in contrast, because rows of windows close together read as scan lines when a
+  building is small. Everything else is drawn by hand and pixelated (`tools/cut_buildings.gd`).
+  Building textures need mipmaps switched on in their import settings for the same reason. Which photo crop is 707 17th and which is 555 17th is a
   guess, and so is where Four Seasons and 1144 Fifteenth stand.
 - **The reference photographs** are other people's and stay out of the repository. Art derived
   from them ships.

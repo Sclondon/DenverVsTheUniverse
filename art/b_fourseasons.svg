@@ -1,15 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="170" height="560" viewBox="0 0 170 560">
-<!-- Four Seasons Hotel Denver: a slim stone-and-glass tower stepping in to a tall spire -->
+<!-- Four Seasons Hotel Denver: a slim stone-and-glass tower stepping in to a tall spire. Flat faces only: the tool draws the windows. -->
 <rect x="80" y="12" width="8" height="120" fill="#c9c2b0"/>
 <rect x="66" y="110" width="36" height="40" fill="#8fa9c4"/>
 <rect x="50" y="146" width="68" height="70" fill="#d8ccb4"/>
 <rect x="34" y="212" width="102" height="338" fill="#d8ccb4"/>
-<rect x="34" y="212" width="34" height="338" fill="#b9ad96"/>
-<g fill="#6f8fb0">
-<rect x="74" y="226" width="56" height="10"/><rect x="74" y="250" width="56" height="10"/><rect x="74" y="274" width="56" height="10"/><rect x="74" y="298" width="56" height="10"/><rect x="74" y="322" width="56" height="10"/><rect x="74" y="346" width="56" height="10"/><rect x="74" y="370" width="56" height="10"/><rect x="74" y="394" width="56" height="10"/><rect x="74" y="418" width="56" height="10"/><rect x="74" y="442" width="56" height="10"/><rect x="74" y="466" width="56" height="10"/><rect x="74" y="490" width="56" height="10"/><rect x="74" y="514" width="56" height="10"/>
-<rect x="58" y="158" width="52" height="10"/><rect x="58" y="182" width="52" height="10"/>
-</g>
-<g fill="#8a7f6a">
-<rect x="40" y="226" width="22" height="10"/><rect x="40" y="274" width="22" height="10"/><rect x="40" y="322" width="22" height="10"/><rect x="40" y="370" width="22" height="10"/><rect x="40" y="418" width="22" height="10"/><rect x="40" y="466" width="22" height="10"/><rect x="40" y="514" width="22" height="10"/>
-</g>
+<rect x="34" y="212" width="34" height="338" fill="#a89c86"/>
+<rect x="50" y="146" width="22" height="70" fill="#a89c86"/>
 </svg>

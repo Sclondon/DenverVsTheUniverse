@@ -38,7 +38,9 @@ const SPECS := {
 
 
 ## Hand-drawn landmarks that aren't in the photo get the same pixel treatment (art/b_<name>.svg).
-const DRAWN := ["capitol", "union", "df", "bear", "fourseasons", "b1144", "b1999", "elitch", "civic", "house_a", "house_b", "house_c", "townhomes", "church", "school", "shop", "firehouse", "tree_a", "tree_b", "tree_c", "train_loco", "train_car1", "train_car2", "train_car3"]
+const DRAWN := ["capitol", "union", "df", "bear", "elitch", "civic", "house_a", "house_b", "house_c", "townhomes", "church", "school", "shop", "firehouse", "tree_a", "tree_b", "tree_c", "train_loco", "train_car1", "train_car2", "train_car3"]
+## Towers drawn by hand as flat faces only, which then get the same painted windows as the photographed ones.
+const DRAWN_TOWERS := ["fourseasons", "b1144", "b1999"]
 ## The drawn landmarks' art is this many SVG pixels per world unit.
 const DRAWN_PPU := 94.8
 
@@ -56,6 +58,11 @@ func _initialize() -> void:
 	var made := {}
 	for id: String in SPECS:
 		made[id] = _cut(photo, SPECS[id])
+	for id: String in DRAWN_TOWERS:
+		var flat := Image.new()
+		flat.load_svg_from_buffer(FileAccess.get_file_as_bytes("res://art/b_%s.svg" % id))
+		flat = flat.get_region(Rect2i(PAD, PAD, flat.get_width() - PAD * 2, flat.get_height() - PAD * 2))
+		made[id] = _paint(_shrink(flat, roundi(flat.get_width() / DRAWN_PPU / PIXEL), roundi(flat.get_height() / DRAWN_PPU / PIXEL)))
 	for id: String in DRAWN:
 		var svg := Image.new()
 		svg.load_svg_from_buffer(FileAccess.get_file_as_bytes("res://art/b_%s.svg" % id))
@@ -164,17 +171,19 @@ func _paint(img: Image) -> Image:
 	for at: Vector2i in cells:
 		var p := palette[face[at]]
 		var c := Color(p.x, p.y, p.z)
-		# Windows: panes two pixels square with a pixel of wall between them, so they read as
-		# windows and not as stripes. Sunlit faces have bright glass, shaded faces dark glass with
-		# the odd office light left on (decided per pane).
-		if at.y % 4 in [1, 2] and at.x % 3 != 0 and face.get(at + Vector2i(0, -2), -1) == face[at] and face.get(at + Vector2i(0, 2), -1) == face[at]:
-			rng.seed = (at.x / 3) * 7919 + (at.y / 4) * 104729 + w
+		# Windows: separate panes two pixels square with two pixels of wall on every side, and
+		# only gently lighter or darker than the wall. Anything closer together, or stronger,
+		# runs together into stripes when the building is small. Sunlit faces have bright glass,
+		# shaded faces dark glass with the odd office light left on (decided per pane).
+		if at.y % 4 in [1, 2] and at.x % 4 in [1, 2] and face.get(at + Vector2i(0, -2), -1) == face[at] and face.get(at + Vector2i(0, 2), -1) == face[at] \
+				and face.get(at + Vector2i(-2, 0), -1) == face[at] and face.get(at + Vector2i(2, 0), -1) == face[at]:
+			rng.seed = (at.x / 4) * 7919 + (at.y / 4) * 104729 + w
 			if c.get_luminance() > 0.45:
-				c = c.lightened(0.3)
+				c = c.lightened(0.2)
 			elif rng.randf() < 0.07:
 				c = Color(1.0, 0.86, 0.45)
 			else:
-				c = c.darkened(0.35)
+				c = c.darkened(0.22)
 		if face.get(at + Vector2i.UP, -1) == -1 or face.get(at + Vector2i.LEFT, -1) == -1 or face.get(at + Vector2i.RIGHT, -1) == -1:
 			c = c.darkened(0.5)
 		img.set_pixelv(at, c)
