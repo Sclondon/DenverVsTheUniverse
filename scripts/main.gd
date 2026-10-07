@@ -48,6 +48,11 @@ const STICK_REACH := 64.0
 ## The swiping finger and where it came down; a swipe is this far, in screen pixels.
 var _swipe_touch := -1
 var _swipe_from := Vector2.ZERO
+## Where and when each finger came down, to tell a tap (a jump) from a hold. A tap lasts under TAP milliseconds.
+var _stick_down := Vector2.ZERO
+var _swipe_down := Vector2.ZERO
+var _swipe_at := 0
+const TAP := 220
 const SWIPE := 55.0
 ## The push the robot's present run began with, and the way it set off.
 var _ref := Vector2.ZERO
@@ -185,13 +190,21 @@ func _unhandled_input(e: InputEvent) -> void:
 				_stick_from = e.position
 				_stick = Vector2.ZERO
 				_stick_at = Time.get_ticks_msec()
+				_stick_down = e.position
 			elif _swipe_touch == -1:
 				_swipe_touch = e.index
 				_swipe_from = e.position
+				_swipe_down = e.position
+				_swipe_at = Time.get_ticks_msec()
 		elif e.index == _stick_touch:
+			# A quick tap, there and gone without moving, is a jump
+			if Time.get_ticks_msec() - _stick_at < TAP and e.position.distance_to(_stick_down) < 24.0:
+				player.jump()
 			_stick_touch = -1
 			_stick = Vector2.ZERO
 		elif e.index == _swipe_touch:
+			if Time.get_ticks_msec() - _swipe_at < TAP and e.position.distance_to(_swipe_down) < 24.0:
+				player.jump()
 			_swipe_touch = -1
 	elif e is InputEventScreenDrag and e.index == _stick_touch:
 		var pull: Vector2 = e.position - _stick_from
@@ -572,7 +585,7 @@ func _apply_options() -> void:
 		w.visible = not w.benched and not w.down
 
 
-## A swipe: up is a jump, sideways a dash that way (once their cards are held).
+## A swipe: up is a jump, sideways a dash that way.
 func _flick(way: Vector2) -> void:
 	if absf(way.y) > absf(way.x):
 		if way.y < 0.0:

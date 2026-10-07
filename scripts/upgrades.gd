@@ -59,9 +59,9 @@ const LIST := [
 	{"id": "wingman", "name": "Wingman Drills", "kind": "tank", "max": 4, "icon": "robot", "desc": [
 		"Your wingman shoots faster and from farther off.", "Faster again, and its darts hit harder.", "Twin barrels for the wingman.", "The wingman at its best: fastest, hardest, farthest."]},
 	{"id": "dash", "name": "Vector Dash", "kind": "tank", "max": 2, "icon": "i_treads", "desc": [
-		"Swipe sideways (or press Shift) to dash: a cartwheel that nothing can hit you during.", "The dash is ready again twice as fast."]},
+		"The dash (flick sideways, or Shift) is ready again twice as fast.", "Ready faster still."]},
 	{"id": "jump", "name": "Vertical Takeoff", "kind": "tank", "max": 2, "icon": "robot", "desc": [
-		"Swipe up (or press Space) to jump: a flipping leap over what is coming.", "Leaps higher, and fires half again as fast in the air."]},
+		"The jump (tap, flick up, or Space) goes higher, and the robot fires half again as fast in the air.", "Higher still."]},
 	{"id": "armor", "name": "Extra Armor", "kind": "tank", "max": 3, "icon": "heart", "desc": [
 		"One more heart, and all hearts refilled.", "One more heart, and all hearts refilled.", "One more heart, and all hearts refilled."]},
 	{"id": "repair", "name": "Emergency Repairs", "kind": "city", "max": 999, "icon": "i_wrench", "desc": [

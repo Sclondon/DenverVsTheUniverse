@@ -106,7 +106,7 @@ across it through each park.
 | Action | Touch | Keyboard |
 | --- | --- | --- |
 | Run | The first finger down, anywhere, is a joystick | Arrows or WASD |
-| Jump | Flick up | Space or Enter |
+| Jump | A quick tap, or a flick up | Space or Enter |
 | Dash | Flick sideways | Shift |
 | Aim and fire | Automatic | Automatic |
 | Pick a card | Tap it | 1, 2, 3 |
@@ -119,8 +119,9 @@ across it through each park.
 - A flick is a quick movement. With the joystick finger it must come in the first fifth of a
   second after touching down. A second finger may rest first and flick later.
 - A dash runs its course before steering takes over again.
-- Jump and dash do nothing until unlocked by a card or by tech.
+- Jump and dash are there from the start; cards and tech make the jump higher and the dash ready sooner.
 - It shoots the nearest alien inside the faint ring round it, and straight up when there is none.
+  The ring is exactly the gun's reach and does not move with the robot's animation.
 
 ### Rules
 
@@ -242,8 +243,8 @@ building, one heart) is offered when City reads below 75, and fills a gap when f
 | Extra Armor | 3 | +1 heart and a full refill |
 | Shoulder Rockets | 3 | Homing rockets at the toughest alien |
 | Gun Drone | 2 | A small gun drone over the robot per level |
-| Vector Dash | 2 | Unlocks the dash; then it recharges twice as fast |
-| Vertical Takeoff | 2 | Unlocks the jump; then it goes higher |
+| Vector Dash | 2 | The dash is ready twice as fast, then faster still |
+| Vertical Takeoff | 2 | A higher jump and faster fire in the air, then higher still |
 | Strike Eagle Refit | 2 | Hearts, damage and a force field. Not before wave 3; always offered after a mothership |
 | Wingman Drills | 4 | Wingmen shoot faster, harder and farther; twin barrels at level 3. Not offered with none in the fight |
 
@@ -264,8 +265,8 @@ Each gives a level of an existing upgrade, on top of any cards and past a card's
 | Weapons | Movement | Protection |
 | --- | --- | --- |
 | Ray Optics: +1 damage | Saucer Lift: run faster | Alien Alloy: +1 heart, full refill |
-| Plasma Rounds: darts pierce | Gravity Boots: the jump, or a higher one | Force Field: a refit tier (or +1 heart if both are held), full refill |
-| Mothership Core: fire faster | Warp Dash: the dash, or a quicker one | Hive Mind: better wingmen |
+| Plasma Rounds: darts pierce | Gravity Boots: a higher jump | Force Field: a refit tier (or +1 heart if both are held), full refill |
+| Mothership Core: fire faster | Warp Dash: a dash ready sooner | Hive Mind: better wingmen |
 
 **Scrap against cost, by arithmetic and not yet by play:** wave 1 pays 10, a wave of two small
 saucers 20, a kaiju 44, a mothership 250. A first-tier tech should be affordable around wave 3

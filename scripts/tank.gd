@@ -60,7 +60,7 @@ var _rocket_t := 2.0
 var _drones: Array[Cutout] = []
 var _drone_t := 0.0
 
-## Abilities unlocked by cards (0 = not yet): the dash and the jump.
+## How good the dash and the jump are: 1 to start with, more with cards and tech.
 var dash_level := 0
 var jump_level := 0
 ## Height off the street while jumping.
@@ -124,7 +124,8 @@ func _init() -> void:
 	hoop.material = faint
 	_ring = MeshInstance3D.new()
 	_ring.mesh = hoop
-	_ring.rotation.x = PI * 0.5
+	# It stands apart from the body, so nothing the body does (recoil, bobbing, flips) moves it
+	_ring.top_level = true
 	_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(_ring)
 
@@ -161,9 +162,10 @@ func apply(levels: Dictionary) -> void:
 	speed = 13.0 * (1.0 + 0.2 * int(levels.get("treads", 0)))
 	max_hearts = BASE_HEARTS + int(levels.get("armor", 0)) + int(CHASSIS[chassis].hearts)
 	rockets = int(levels.get("rockets", 0))
-	dash_level = int(levels.get("dash", 0))
+	# Every robot can dash and jump from the start; the cards and tech make them better
+	dash_level = 1 + int(levels.get("dash", 0))
 	aim_range = 17.0 + 4.0 * int(levels.get("radar", 0))
-	jump_level = int(levels.get("jump", 0))
+	jump_level = 1 + int(levels.get("jump", 0))
 	var drones := int(levels.get("drone", 0))
 	while _drones.size() > drones:
 		_drones.pop_back().queue_free()
@@ -173,7 +175,7 @@ func apply(levels: Dictionary) -> void:
 		_drones.append(d)
 
 
-## A burst sideways that nothing can hit it during. Needs the Vector Dash card. `dir` 0 = the way it faces.
+## A burst sideways that nothing can hit it during. The Vector Dash card makes it ready sooner. `dir` 0 = the way it faces.
 func dash(dir: float) -> void:
 	if dash_level == 0 or _dash_cool > 0.0:
 		return
@@ -208,7 +210,7 @@ func dashing() -> bool:
 	return _dash_t > 0.0
 
 
-## A leap on the engines. Needs the Vertical Takeoff card.
+## A leap on the engines. The Vertical Takeoff card makes it higher.
 func jump() -> void:
 	if jump_level == 0 or y > 0.0:
 		return
@@ -297,8 +299,8 @@ func update(delta: float, firing: bool) -> void:
 		_drone_t = 0.8
 	_recoil = maxf(0.0, _recoil - delta * 6.0)
 	_acrobatics(delta)
-	_ring.position = Vector3(GUN_X / SIZE, (muzzle + y * 0.0) / SIZE, 0.0)
-	_ring.scale = Vector3.ONE * aim_range / SIZE
+	# The ring is exactly the gun's reach, centred where its shots are measured from
+	_ring.global_transform = Transform3D(Basis(Vector3.RIGHT, PI * 0.5).scaled(Vector3.ONE * aim_range), Vector3(x + GUN_X, muzzle + y, z))
 	_pop = maxf(0.0, _pop - delta * 2.5)
 	var shielded: bool = float(CHASSIS[chassis].field) > 0.0 and _field <= 0.0
 	_power = move_toward(_power, 1.0 if shielded else 0.0, delta * 3.0)

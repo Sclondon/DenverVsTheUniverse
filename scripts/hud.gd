@@ -332,7 +332,7 @@ func _build_title() -> void:
 	_build_menu()
 	foot.add_child(_menu)
 	foot.add_child(_passive(_gap(8)))
-	foot.add_child(_label("Touch and push to run the way you push. Flick up to jump or sideways to dash, once unlocked. The robots aim on their own.", 20, Color("e6dfc8"), true, HAND))
+	foot.add_child(_label("Touch and push to run. Tap or flick up to jump, flick sideways to dash. The robots aim on their own.", 20, Color("e6dfc8"), true, HAND))
 
 
 func _build_cards() -> void:

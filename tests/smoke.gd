@@ -58,6 +58,16 @@ func _run() -> void:
 		main.swarm.rng.seed = 200 + r
 		main.start_game()
 		_check(main.state == main.State.PLAYING and main.wave == 1, "run starts on wave 1")
+		# The jump is there from the first wave, and the range ring is the gun's reach whatever the robot is doing
+		main.player.jump()
+		main._process(STEP)
+		main._process(STEP)
+		_check(main.player.y > 0.2, "the robot can jump from the start")
+		main.player._recoil = 1.0
+		main._process(STEP)
+		var ring: Transform3D = main.player._ring.global_transform
+		_check(absf(ring.basis.get_scale().x - main.player.aim_range) < 0.01, "the range ring is as wide as the reach")
+		_check(absf(ring.origin.x - main.player.x - 0.79) < 0.05, "the range ring is centred on the gun")
 		_check(main.city.standing() == main.city.buildings.size() and main.player.hearts == 6, "run starts with a whole city")
 		var t := 0.0
 		var frames := 0
