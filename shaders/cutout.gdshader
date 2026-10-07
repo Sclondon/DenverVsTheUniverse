@@ -17,6 +17,19 @@ uniform float solid = 0.0;
 uniform float glow = 0.22;
 // Pixel art: the size of one chunky pixel, in texels, so each is drawn as one crisp block (0 = smooth art).
 uniform float chunk = 0.0;
+// Plywood: real wood grain on the bare edge and back, and showing faintly through the paint.
+uniform sampler2D wood : source_color, filter_linear_mipmap, repeat_enable;
+uniform float wooden = 0.0;
+// Flips the art left to right (turning the piece itself round would turn its face from the lamps).
+uniform float mirror = 0.0;
+varying vec2 grain_uv;
+
+void vertex() {
+	grain_uv = VERTEX.xy * 0.3;
+	if (mirror > 0.5) {
+		UV.x = 1.0 - UV.x;
+	}
+}
 
 void fragment() {
 	vec4 c = texture(tex, UV);
@@ -35,11 +48,19 @@ void fragment() {
 	edge = max(edge, texture(tex, UV - d).a);
 	edge = max(edge, texture(tex, UV + vec2(d.x, -d.y)).a);
 	edge = max(edge, texture(tex, UV + vec2(-d.x, d.y)).a);
-	if (edge < 0.5) {
+	// The layers behind the face are cut to the art itself; only the face has the routed rim
+	if (edge < 0.5 || (UV2.x > 0.5 && c.a < 0.5)) {
 		discard;
 	}
 	vec3 col = mix(paper, c.rgb, smoothstep(0.35, 0.65, c.a));
-	col = mix(col, paper * (0.88 + 0.12 * sin(UV.y * 260.0)), solid);
+	// Layers behind the face (UV2.x = 1) are bare board: the thickness of the sheet
+	float bare = max(solid, UV2.x);
+	col = mix(col, paper * (0.88 + 0.12 * sin(UV.y * 260.0)), bare);
+	if (wooden > 0.0) {
+		vec3 g = texture(wood, grain_uv).rgb;
+		float painted = smoothstep(0.35, 0.65, c.a) * (1.0 - bare);
+		col = mix(g * 1.5 * (1.0 - 0.3 * UV2.y), col * (0.82 + 0.5 * g.g), painted);
+	}
 	if (cut < 0.999) {
 		float h = 1.0 - UV.y;
 		float jag = sin(UV.x * 37.0) * 0.012 + sin(UV.x * 91.0 + 1.7) * 0.008 + sin(UV.x * 13.0 + 0.4) * 0.015;

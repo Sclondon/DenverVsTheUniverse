@@ -447,10 +447,55 @@ def alien_boss():
     return 5.8, 0.1
 
 
+# --- Scenery --------------------------------------------------------------------------------------
+
+def clump(name, material, radius, seed, **kw):
+    """A lumpy tuft of scenic foliage, like the lichen on a model-railway tree."""
+    import random
+    rnd = random.Random(seed)
+    bm = bmesh.new()
+    bmesh.ops.create_icosphere(bm, subdivisions=2, radius=radius)
+    for v in bm.verts:
+        v.co *= rnd.uniform(0.78, 1.18)
+    kw.setdefault("sharp", 80.0)
+    kw.setdefault("subdiv", 1)
+    return _finish(bm, name, material, **kw)
+
+
+def tree(seed, leaves, height):
+    """A model-railway tree: a twisted-wire trunk with tufts of foliage. Stands on the origin."""
+    import random
+    rnd = random.Random(seed)
+    bark = mat("4a3524", 0.9)
+    loft("trunk", bark, [(0.0, 0.12, 0.12), (0.06, 0.07, 0.07), (height * 0.45, 0.05, 0.05, 2, 0.03, 0.0), (height * 0.7, 0.03, 0.03, 2, -0.02, 0.02)], n=8)
+    for i in range(3):
+        a = math.radians(i * 120.0 + seed * 40.0)
+        loft("branch", bark, [(0.0, 0.035, 0.035), (height * 0.3, 0.015, 0.015)], n=6, loc=(0, 0, height * 0.4), rot=(math.degrees(math.cos(a)) * 0.7, math.degrees(math.sin(a)) * 0.7, 0))
+    for i in range(7):
+        a = rnd.uniform(0, 2 * math.pi)
+        d = rnd.uniform(0.0, 0.42) * height * 0.5
+        clump("leaves", mat(leaves[i % len(leaves)], 0.95), height * rnd.uniform(0.2, 0.3), seed * 10 + i,
+              loc=(math.cos(a) * d, math.sin(a) * d * 0.8, height * rnd.uniform(0.58, 0.9)), scale=(1.0, 1.0, rnd.uniform(0.75, 0.95)))
+    return height * 1.4, height * 0.5
+
+
+def tree_a():
+    return tree(1, ("4f8f2e", "5fa838", "3f7a2a"), 2.0)
+
+
+def tree_b():
+    return tree(2, ("6a9a2a", "86b83a", "587f24"), 1.6)
+
+
+def tree_c():
+    return tree(3, ("c9862a", "d8a23a", "b8641e"), 1.8)
+
+
 MODELS = {
     "robot": robot, "alien_grunt": alien_grunt, "alien_spitter": alien_spitter, "alien_crab": alien_crab,
     "alien_saucer": alien_saucer, "alien_diver": alien_diver, "alien_brute": alien_brute,
     "alien_splitter": alien_splitter, "alien_mite": alien_mite, "alien_boss": alien_boss,
+    "tree_a": tree_a, "tree_b": tree_b, "tree_c": tree_c,
 }
 
 

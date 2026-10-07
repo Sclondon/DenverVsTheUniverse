@@ -1,7 +1,8 @@
 class_name City
 extends Node3D
-## Denver in painted plywood, strung along the table: downtown in the middle, Cherry Creek to the
-## left, RiNo to the right, low-rise filler between and a row of rooftops in front of the street.
+## Denver in painted plywood, strung along the table. South to north: Cherry Creek, Wash Park,
+## Capitol Hill, downtown, LoDo, City Park and RiNo (Diorama.DISTRICTS), low-rise filler between and
+## a row of rooftops in front of the street.
 ## The art is pixel cut-outs of the real buildings (tools/cut_buildings.gd makes art/px/).
 ## Buildings crumble from the roof down as they take hits.
 
@@ -9,7 +10,7 @@ extends Node3D
 const RUBBLE := 0.1
 const PPU := 100.0
 ## Half the length of the built-up strip. The robot and the aliens stay within it.
-const HALF := 22.0
+const HALF := 66.0
 ## Denver has fallen once less than this much of its total health is left.
 const LOSS := 0.5
 
@@ -34,20 +35,33 @@ const ROWS := [
 	[-7.6, 7.6, -3.4, ["mid"], 0.3, "e6e6f2"],
 	[-7.8, 7.8, -1.8, ["low"], 0.5, "ffffff"],
 	# Cherry Creek: tidy mid-rises
-	[-21.4, -10.6, -4.0, ["mid"], 0.5, "c6cee6"],
-	[-21.0, -10.8, -2.8, ["mid", "low"], 0.6, "e6eeff"],
-	[-21.4, -10.6, -1.5, ["low"], 0.5, "f2f6ff"],
-	# RiNo: low brick and warehouses
-	[10.6, 21.4, -4.0, ["low", "mid"], 0.6, "e6c0b0"],
-	[10.8, 21.0, -2.8, ["low"], 0.5, "ffd2c0"],
-	[10.6, 21.4, -1.5, ["low"], 0.7, "ffdccc"],
-	# The stretches between
+	[-65.4, -48.0, -4.0, ["mid"], 0.5, "c6cee6"],
+	[-65.0, -48.2, -2.8, ["mid", "low"], 0.6, "e6eeff"],
+	[-65.4, -48.0, -1.5, ["low"], 0.5, "f2f6ff"],
+	# Capitol Hill: old apartment blocks
+	[-27.6, -10.6, -4.0, ["mid", "low"], 0.5, "d8c8c0"],
+	[-27.4, -10.8, -2.8, ["low", "mid", "low"], 0.6, "f0e0d6"],
+	[-27.6, -10.6, -1.5, ["low"], 0.6, "fff0e6"],
+	# LoDo: brick blocks by the ballpark
+	[10.6, 27.6, -4.0, ["low", "mid"], 0.6, "e6c0b0"],
+	[10.8, 27.4, -2.8, ["low"], 0.5, "ffd2c0"],
+	[10.6, 27.6, -1.5, ["low"], 0.7, "ffdccc"],
+	# RiNo: warehouses in loud paint
+	[48.0, 65.4, -4.0, ["low", "mid", "low"], 0.7, "ffb0d8"],
+	[48.2, 65.0, -2.8, ["low"], 0.6, "b0f0e0"],
+	[48.0, 65.4, -1.5, ["low"], 0.8, "ffe6a0"],
+	# The parks: just the houses along their far side
+	[-46.6, -28.8, -10.4, ["low"], 0.9, "d8d8e6"],
+	[28.8, 46.6, -10.4, ["low"], 0.9, "d8d8e6"],
+	# The stretches either side of downtown
 	[-10.3, -8.1, -3.2, ["low"], 0.4, "d8d8e6"],
 	[-10.3, -8.1, -1.6, ["low"], 0.8, "ffffff"],
 	[8.1, 10.3, -3.2, ["low"], 0.4, "d8d8e6"],
 	[8.1, 10.3, -1.6, ["low"], 0.8, "ffffff"],
-	# Rooftops this side of the street, in front of the robot
-	[-21.5, 21.5, 1.9, ["low"], 3.2, "ffffff"],
+	# Rooftops this side of the street, in front of the robot (the parks are left open)
+	[-65.5, -48.0, 1.9, ["low"], 3.2, "ffffff"],
+	[-27.5, 27.5, 1.9, ["low"], 3.2, "ffffff"],
+	[48.0, 65.5, 1.9, ["low"], 3.2, "ffffff"],
 ]
 
 
@@ -107,7 +121,7 @@ func _add(art_name: String, x: float, z: float, id: String, mirrored: bool) -> B
 	b.node.add_backing()
 	b.node.position = Vector3(x, 0.0, z)
 	if mirrored:
-		b.node.scale.x = -1.0
+		b.node.mat.set_shader_parameter("mirror", 1.0)
 	b.half_w = b.node.size.x * 0.5 - Cutout.PAD / PPU
 	b.height = b.node.content_height()
 	b.max_hp = clampi(roundi(b.height * 1.4), 2, 8)

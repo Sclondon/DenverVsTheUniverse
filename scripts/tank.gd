@@ -22,7 +22,7 @@ var x := 0.0
 ## Where the driver is steering to; the tank chases it at `speed`.
 var goal_x := 0.0
 var chassis := 0
-var speed := 10.0
+var speed := 13.0
 var fire_rate := 2.6
 var damage := 1.0
 var barrels := 1
@@ -71,7 +71,7 @@ func apply(levels: Dictionary) -> void:
 	pierce = int(levels.get("pierce", 0))
 	var chile := int(levels.get("chile", 0))
 	splash = 0.0 if chile == 0 else 0.7 + 0.35 * chile
-	speed = 10.0 * (1.0 + 0.2 * int(levels.get("treads", 0)))
+	speed = 13.0 * (1.0 + 0.2 * int(levels.get("treads", 0)))
 	max_hearts = BASE_HEARTS + int(levels.get("armor", 0)) + int(CHASSIS[chassis].hearts)
 	rockets = int(levels.get("rockets", 0))
 	var drones := int(levels.get("drone", 0))

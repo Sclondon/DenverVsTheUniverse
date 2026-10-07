@@ -86,19 +86,23 @@ func spawn_wave(n: int) -> void:
 	# Gentle at first, then steep: past wave 12 the aliens toughen faster than any build can keep up with forever
 	hp_scale = 1.0 + maxf(0.0, n - 5) * 0.18 + pow(maxf(0.0, n - 12), 2.0) * 0.05
 	var boss := n % 5 == 0
-	# The first waves hit downtown, then one district at a time, then two or three at once
-	var where: Array = [1]
+	# They strike the neighbourhoods nearest the robot: the nearest one at first, then one of the
+	# nearest two, then two or three at once
+	var near: Array = Diorama.TOWNS.duplicate()
+	var from: float = game.player.x
+	near.sort_custom(func(a: float, b: float) -> bool: return absf(a - from) < absf(b - from))
+	var where: Array = [0]
 	if boss:
-		where = [] if n == 5 else [0, 2]
+		where = [] if n == 5 else [1, 2]
 	elif n > 7:
 		where = [0, 1, 2]
 	elif n > 4:
-		where = [[0, 1], [1, 2], [0, 2]][rng.randi() % 3]
+		where = [[0, 1], [0, 2]][rng.randi() % 2]
 	elif n > 2:
-		where = [rng.randi() % 3]
+		where = [rng.randi() % 2]
 	for d: int in where:
 		var cols := clampi(2 + n / 4, 2, 4) - (1 if where.size() > 2 else 0)
-		_squad(Diorama.DISTRICTS[d], cols, 1 if n < 7 else 2, _row_kinds(n))
+		_squad(near[d], cols, 1 if n < 7 else 2, _row_kinds(n))
 	_grace = 1.6
 	_saucer_t = 10.0
 	if boss:

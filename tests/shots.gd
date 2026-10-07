@@ -36,6 +36,13 @@ func _run() -> void:
 	main.start_game()
 	await _wait(5.0)
 	await _snap("2_wave1")
+	for x: float in [-37.7, 56.6]:
+		main.player.x = x
+		main.player.goal_x = x
+		await _wait(2.0)
+		await _snap("2_at_%d" % int(x))
+	main.player.x = 0.0
+	main.player.goal_x = 0.0
 
 	# A mid-run city with most of the defenses up
 	main.levels = {"flak": 3, "blucifer": 2, "dome": 3, "battery": 2, "tesla": 2, "hail": 2, "twin": 2, "chile": 1, "mech": 1, "drone": 2, "rockets": 1, "cow": 1, "watchtower": 1}
