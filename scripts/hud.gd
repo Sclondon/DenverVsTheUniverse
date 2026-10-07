@@ -257,7 +257,7 @@ func _build_title() -> void:
 	_title.add_child(_title_best)
 	_title_tap = _label("TAP OR PRESS SPACE TO DEFEND THE CITY", 26)
 	foot.add_child(_title_tap)
-	foot.add_child(_label("Run with the arrow keys or by dragging. The robot fires on its own.", 17, Color("d6d0c0")))
+	foot.add_child(_label("Run with the arrow keys or by dragging. The robot aims and fires on its own.", 17, Color("d6d0c0")))
 
 
 func _build_cards() -> void:

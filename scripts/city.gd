@@ -58,10 +58,17 @@ const ROWS := [
 	[-10.3, -8.1, -1.6, ["low"], 0.8, "ffffff"],
 	[8.1, 10.3, -3.2, ["low"], 0.4, "d8d8e6"],
 	[8.1, 10.3, -1.6, ["low"], 0.8, "ffffff"],
-	# Rooftops this side of the street, in front of the robot (the parks are left open)
-	[-65.5, -48.0, 1.9, ["low"], 3.2, "ffffff"],
-	[-27.5, 27.5, 1.9, ["low"], 3.2, "ffffff"],
-	[48.0, 65.5, 1.9, ["low"], 3.2, "ffffff"],
+	# This side of the street the city carries on toward the table edge, so the street cuts through
+	# the middle of it. Low roofs only, so the robot stays in view (the parks are left open).
+	[-65.5, -48.0, 1.9, ["low"], 1.1, "ffffff"],
+	[-27.5, 27.5, 1.9, ["low"], 1.1, "ffffff"],
+	[48.0, 65.5, 1.9, ["low"], 1.1, "ffffff"],
+	[-65.3, -48.2, 3.0, ["low"], 0.7, "f0f0ff"],
+	[-27.3, 27.3, 3.0, ["low"], 0.7, "f0f0ff"],
+	[48.2, 65.3, 3.0, ["low"], 0.7, "f0f0ff"],
+	[-65.5, -48.0, 4.1, ["low"], 0.5, "e6e6f6"],
+	[-27.5, 27.5, 4.1, ["low"], 0.5, "e6e6f6"],
+	[48.0, 65.5, 4.1, ["low"], 0.5, "e6e6f6"],
 ]
 
 

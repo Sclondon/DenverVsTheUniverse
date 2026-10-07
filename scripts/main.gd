@@ -36,6 +36,10 @@ var _clear_t := 0.0
 var _over_t := 0.0
 var _touch := -1
 var _touch_x := 0.0
+## Finger speed, in screen pixels a second, that counts as a flick.
+const SWIPE := 900.0
+var _tap_dir := 0.0
+var _tap_at := 0
 
 
 func _ready() -> void:
@@ -129,6 +133,12 @@ func _unhandled_input(e: InputEvent) -> void:
 		# Relative steering: the tank moves as far as the finger does, wherever the finger is.
 		var wx := _world_x(e.position)
 		player.goal_x = clampf(player.goal_x + (wx - _touch_x) * 1.2, -Tank.LIMIT, Tank.LIMIT)
+		# A flick is an ability (once its card is held): up to jump, sideways to dash
+		if state == State.PLAYING:
+			if e.velocity.y < -SWIPE and absf(e.velocity.y) > absf(e.velocity.x):
+				player.jump()
+			elif absf(e.velocity.x) > SWIPE * 1.5:
+				player.dash(e.velocity.x)
 		_touch_x = wx
 	elif e is InputEventKey and e.pressed and not e.echo:
 		match e.keycode:
@@ -137,6 +147,20 @@ func _unhandled_input(e: InputEvent) -> void:
 					start_game()
 			KEY_1, KEY_2, KEY_3:
 				pick_card(e.keycode - KEY_1)
+			KEY_UP, KEY_W:
+				if state == State.PLAYING:
+					player.jump()
+			KEY_SHIFT:
+				if state == State.PLAYING:
+					player.dash(0.0)
+			KEY_LEFT, KEY_A, KEY_RIGHT, KEY_D:
+				# Tapping a direction twice quickly is a dash too
+				var dir := -1.0 if e.keycode in [KEY_LEFT, KEY_A] else 1.0
+				var now := Time.get_ticks_msec()
+				if state == State.PLAYING and dir == _tap_dir and now - _tap_at < 260:
+					player.dash(dir)
+				_tap_dir = dir
+				_tap_at = now
 			KEY_M:
 				Sfx.muted = not Sfx.muted
 

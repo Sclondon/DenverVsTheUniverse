@@ -9,7 +9,9 @@ const FOV := 30.0
 const BOX_W := 17.6
 const BOX_H := 15.2
 const BOTTOM := -1.3
-const PITCH := 0.1
+## The camera looks down on the table from above and a little to the right, like someone leaning over it.
+const PITCH := 0.38
+const YAW := 0.12
 ## The table's districts, south to north, with a lamp over each. PARKS are open ground; the
 ## aliens go for the others (TOWNS).
 const DISTRICTS := [-56.6, -37.7, -18.9, 0.0, 18.9, 37.7, 56.6]
@@ -142,7 +144,7 @@ func _ready() -> void:
 	# Hand-painted signs: the neighbourhoods, and the roadside-attraction kind
 	var signs: Array = [[-67.0, 1.0, "ALIEN\nXING", 0.06], [67.0, 1.0, "UFO\nPARKING", -0.05]]
 	for i in DISTRICTS.size():
-		signs.append([DISTRICTS[i] - (8.8 if i == 3 else 0.0), 4.3, NAMES[i], 0.05 if i % 2 == 0 else -0.04])
+		signs.append([DISTRICTS[i] - (8.8 if i == 3 else 0.0), 5.0, NAMES[i], 0.05 if i % 2 == 0 else -0.04])
 	for s: Array in signs:
 		var post := Cutout.make("sign", Cutout.PPU * 1.15, true)
 		post.position = Vector3(s[0], 0.0, s[1])
@@ -200,7 +202,7 @@ func update_camera(delta: float, focus_x: float) -> void:
 	_shake = maxf(0.0, _shake - delta * 1.6)
 	var jolt := Vector3(_rng.randf_range(-1.0, 1.0), _rng.randf_range(-1.0, 1.0), 0.0) * _shake * _shake
 	var target := Vector3(_cam_x, centre, 0.0)
-	camera.position = target + Vector3(0.0, sin(PITCH) * dist, cos(PITCH) * dist) + jolt
+	camera.position = target + Vector3(sin(YAW) * cos(PITCH), sin(PITCH), cos(YAW) * cos(PITCH)) * dist + jolt
 	camera.look_at(target + jolt)
 	for lamp in _lamps:
 		lamp.shadow_enabled = absf(lamp.position.x - _cam_x) < SHADOW_REACH

@@ -20,7 +20,8 @@ Godot 4.7, GL Compatibility, built for the web (the Scareathon arcade) and phone
 
 ## Playing
 
-- Run: arrow keys / A D, or drag anywhere (the robot moves as far as your finger does). It fires on its own.
+- Run: arrow keys / A D, or drag anywhere (the robot moves as far as your finger does). It aims at the nearest alien in range and fires on its own; the Targeting Radar card extends the range.
+- Abilities come from cards: Vector Dash (flick sideways, Shift, or double-tap a direction) and Vertical Takeoff (flick up, Up or W).
 - Cards: click or tap one, or press 1 / 2 / 3. M mutes.
 - Bombs chew buildings down from the roof; aliens that reach a rooftop or the street crash into it.
 - Shooting a bomb destroys it. Saucers park over a building and pull it apart; shoot them down for a supply crate.
