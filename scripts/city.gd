@@ -92,6 +92,7 @@ class Building:
 	var max_hp: int
 	## What the art shows, eased toward hp / max_hp so damage visibly crumbles.
 	var shown := 1.0
+	var busy := false
 
 	func alive() -> bool:
 		return hp > 0
@@ -107,6 +108,13 @@ class Building:
 
 
 var buildings: Array[Building] = []
+
+## Buildings that are crumbling, flashing or rocking right now: the only ones worked on each frame.
+var _busy: Array[Building] = []
+## Buildings by the one-unit stretch of table they stand over, so a falling bomb only looks at a few.
+var _cells: Array = []
+var _health := 1.0
+var _stale := true
 
 
 func _ready() -> void:
@@ -128,6 +136,12 @@ func _ready() -> void:
 			x += b.half_w * 2.0 + rng.randf_range(0.0, row[4])
 	for mark: Array in LANDMARKS:
 		_add(mark[0], mark[1], mark[2], mark[0], false, LANDMARK_SIZES.get(mark[0], 1.0))
+	_cells.resize(int(HALF * 2.0) + 8)
+	for i in _cells.size():
+		_cells[i] = []
+	for b in buildings:
+		for cell in range(_cell(b.x - b.half_w), _cell(b.x + b.half_w) + 1):
+			_cells[cell].append(b)
 
 
 func _add(art_name: String, x: float, z: float, id: String, mirrored: bool, size: float) -> Building:
@@ -154,18 +168,39 @@ func _add(art_name: String, x: float, z: float, id: String, mirrored: bool, size
 
 
 func _process(delta: float) -> void:
-	for b in buildings:
+	var still: Array[Building] = []
+	for b in _busy:
 		var want := b.fraction() if b.hp < b.max_hp else 1.0
 		if not is_equal_approx(b.shown, want):
 			b.shown = move_toward(b.shown, want, delta * 0.9)
 			b.node.set_cut(b.shown)
 		b.node.fade_flash(delta)
 		b.node.rotation.z = lerpf(b.node.rotation.z, 0.0, 1.0 - exp(-10.0 * delta))
+		if is_equal_approx(b.shown, want) and not b.node.flashing() and absf(b.node.rotation.z) < 0.002:
+			b.node.rotation.z = 0.0
+			b.busy = false
+		else:
+			still.append(b)
+	_busy = still
+
+
+func _cell(x: float) -> int:
+	return clampi(int(floor(x + HALF)) + 4, 0, int(HALF * 2.0) + 7)
+
+
+## Call whenever a building's health changes: it needs redrawing and the city's health recounting.
+func _changed(b: Building) -> void:
+	_stale = true
+	if not b.busy:
+		b.busy = true
+		_busy.append(b)
 
 
 func reset() -> void:
 	for b in buildings:
-		b.hp = b.max_hp
+		if b.hp != b.max_hp:
+			b.hp = b.max_hp
+			_changed(b)
 
 
 func standing() -> int:
@@ -178,12 +213,15 @@ func standing() -> int:
 
 ## Health of the whole city, 0 to 1.
 func health() -> float:
-	var hp := 0
-	var full := 0
-	for b in buildings:
-		hp += b.hp
-		full += b.max_hp
-	return float(hp) / full
+	if _stale:
+		_stale = false
+		var hp := 0
+		var full := 0
+		for b in buildings:
+			hp += b.hp
+			full += b.max_hp
+		_health = float(hp) / full
+	return _health
 
 
 func by_id(id: String) -> Building:
@@ -196,7 +234,9 @@ func by_id(id: String) -> Building:
 ## The tallest standing building whose footprint is under x: the one a falling bomb meets first.
 func column_at(x: float) -> Building:
 	var found: Building = null
-	for b in buildings:
+	if absf(x) > HALF + 3.0:
+		return null
+	for b: Building in _cells[_cell(x)]:
 		if b.alive() and absf(x - b.x) < b.half_w and (found == null or b.top() > found.top()):
 			found = b
 	return found
@@ -229,6 +269,7 @@ func damage(b: Building, amount: int) -> bool:
 	if not b.alive():
 		return false
 	b.hp = maxi(0, b.hp - amount)
+	_changed(b)
 	b.node.flash(0.8)
 	b.node.rotation.z = 0.05 if b.hp % 2 == 0 else -0.05
 	return not b.alive()
@@ -245,6 +286,7 @@ func repair(amount: int) -> int:
 		if worst == null:
 			break
 		worst.hp += 1
+		_changed(worst)
 		used += 1
 	return used
 
@@ -253,7 +295,9 @@ func repair(amount: int) -> int:
 func repair_each(amount: int) -> void:
 	for b in buildings:
 		if b.alive():
-			b.hp = mini(b.max_hp, b.hp + amount)
+			if b.hp < b.max_hp:
+				b.hp = mini(b.max_hp, b.hp + amount)
+				_changed(b)
 
 
 ## Raises one wrecked building back to half health. Returns it, or null if none was down.
@@ -261,6 +305,7 @@ func rebuild_one() -> Building:
 	for b in buildings:
 		if not b.alive():
 			b.hp = ceili(b.max_hp * 0.5)
+			_changed(b)
 			return b
 	return null
 

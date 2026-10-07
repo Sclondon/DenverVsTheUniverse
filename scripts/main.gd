@@ -35,7 +35,8 @@ var hud: Hud
 var _clear_t := 0.0
 var _over_t := 0.0
 var _touch := -1
-var _touch_x := 0.0
+## Where the steering finger is on the screen: the robot runs to the spot on the street under it.
+var _touch_at := Vector2.ZERO
 ## Finger speed, in screen pixels a second, that counts as a flick.
 const SWIPE := 900.0
 var _tap_dir := 0.0
@@ -117,6 +118,9 @@ func _process(delta: float) -> void:
 	if state != State.TITLE:
 		hud.set_stats(score, wave, player.hearts, player.max_hearts, city.percent())
 		_point_at_threats()
+	if _touch != -1 and state in [State.PLAYING, State.CLEARED]:
+		player.goal_x = clampf(_world_x(_touch_at), -Tank.LIMIT, Tank.LIMIT)
+	hud.set_abilities(state == State.PLAYING and player.jump_level > 0, state == State.PLAYING and player.dash_level > 0, player.dash_ready())
 	diorama.drama = 1.0 if state == State.TITLE else 0.0
 	diorama.update_camera(delta, player.x, player.heading())
 
@@ -126,26 +130,32 @@ func _unhandled_input(e: InputEvent) -> void:
 		if e.pressed:
 			if state == State.TITLE:
 				start_game()
-			_touch = e.index
-			_touch_x = _world_x(e.position)
-		elif e.index == _touch:
-			_touch = -1
-	elif e is InputEventScreenDrag and e.index == _touch:
-		# Relative steering: the tank moves as far as the finger does, wherever the finger is.
-		var wx := _world_x(e.position)
-		player.goal_x = clampf(player.goal_x + (wx - _touch_x) * 1.2, -Tank.LIMIT, Tank.LIMIT)
-		# A flick is an ability (once its card is held): up to jump, sideways to dash
-		if state == State.PLAYING:
-			if e.velocity.y < -SWIPE and absf(e.velocity.y) > absf(e.velocity.x):
+				return
+			# The two ability buttons, once their cards are held
+			var ability := hud.ability_at(e.position) if state == State.PLAYING else ""
+			if ability == "jump":
 				player.jump()
-			elif absf(e.velocity.x) > SWIPE * 1.5:
-				player.dash(e.velocity.x)
-		_touch_x = wx
+			elif ability == "dash":
+				player.dash(0.0)
+			else:
+				_touch = e.index
+				_touch_at = e.position
+		elif e.index == _touch:
+			# Letting go stops the robot where it is
+			_touch = -1
+			player.goal_x = player.x
+	elif e is InputEventScreenDrag and e.index == _touch:
+		_touch_at = e.position
+		# A flick upward is a jump too
+		if state == State.PLAYING and e.velocity.y < -SWIPE and absf(e.velocity.y) > absf(e.velocity.x) * 1.5:
+			player.jump()
 	elif e is InputEventKey and e.pressed and not e.echo:
 		match e.keycode:
 			KEY_SPACE, KEY_ENTER:
 				if state == State.TITLE or (state == State.OVER and _over_t > 1.0):
 					start_game()
+				elif state == State.PLAYING:
+					player.jump()
 			KEY_1, KEY_2, KEY_3:
 				pick_card(e.keycode - KEY_1)
 			KEY_UP, KEY_W:

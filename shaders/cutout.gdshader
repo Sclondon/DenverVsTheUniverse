@@ -43,6 +43,7 @@ void fragment() {
 	vec2 o = texel * border;
 	vec2 d = o * 0.7071;
 	float edge = c.a;
+	if (UV2.x < 0.5) {
 	edge = max(edge, texture(tex, UV + vec2(o.x, 0.0)).a);
 	edge = max(edge, texture(tex, UV - vec2(o.x, 0.0)).a);
 	edge = max(edge, texture(tex, UV + vec2(0.0, o.y)).a);
@@ -51,6 +52,7 @@ void fragment() {
 	edge = max(edge, texture(tex, UV - d).a);
 	edge = max(edge, texture(tex, UV + vec2(d.x, -d.y)).a);
 	edge = max(edge, texture(tex, UV + vec2(-d.x, d.y)).a);
+	}
 	// The layers behind the face are cut to the art itself; only the face has the routed rim
 	if (edge < 0.5 || (UV2.x > 0.5 && c.a < 0.5)) {
 		discard;
@@ -58,14 +60,14 @@ void fragment() {
 	vec3 col = mix(paper, c.rgb, smoothstep(0.35, 0.65, c.a));
 	// Layers behind the face (UV2.x = 1) are bare board: the thickness of the sheet
 	float bare = max(solid, UV2.x);
-	col = mix(col, paper * (0.88 + 0.12 * sin(UV.y * 260.0)), bare);
+	col = mix(col, paper, bare);
 	if (wooden > 0.0) {
 		vec3 g = texture(wood, grain_uv).rgb;
 		float painted = smoothstep(0.35, 0.65, c.a) * (1.0 - bare);
-		col = mix(g * 1.5 * (1.0 - 0.3 * UV2.y), col * (0.82 + 0.5 * g.g), painted);
+		col = mix(g * 1.5 * (1.0 - 0.3 * UV2.y), col, painted);
 		// Whoever painted it was not careful: splatter on the bare wood, the odd fleck on the art
 		vec4 paint = splatter(world_xy * 1.1, mix(0.45, 0.025, painted));
-		col = mix(col, paint.rgb * (0.85 + 0.3 * g.g), paint.a * 0.92);
+		col = mix(col, paint.rgb, paint.a * 0.92);
 	}
 	if (cut < 0.999) {
 		float h = 1.0 - UV.y;

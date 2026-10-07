@@ -164,9 +164,11 @@ func _paint(img: Image) -> Image:
 	for at: Vector2i in cells:
 		var p := palette[face[at]]
 		var c := Color(p.x, p.y, p.z)
-		# Windows: bands two pixels apart, split by mullions. Sunlit faces have bright glass, shaded
-		# faces dark glass with the odd office light left on.
-		if at.y % 3 == 1 and at.x % 4 != 0 and face.get(at + Vector2i.UP, -1) == face[at] and face.get(at + Vector2i.DOWN, -1) == face[at]:
+		# Windows: panes two pixels square with a pixel of wall between them, so they read as
+		# windows and not as stripes. Sunlit faces have bright glass, shaded faces dark glass with
+		# the odd office light left on (decided per pane).
+		if at.y % 4 in [1, 2] and at.x % 3 != 0 and face.get(at + Vector2i(0, -2), -1) == face[at] and face.get(at + Vector2i(0, 2), -1) == face[at]:
+			rng.seed = (at.x / 3) * 7919 + (at.y / 4) * 104729 + w
 			if c.get_luminance() > 0.45:
 				c = c.lightened(0.3)
 			elif rng.randf() < 0.07:

@@ -40,6 +40,7 @@ var _over: Control
 var _over_lines: Array[Label] = []
 var _time := 0.0
 var _threats: Array[Label] = []
+var _abilities: Array[ColorRect] = []
 
 
 func _ready() -> void:
@@ -295,7 +296,7 @@ func _build_title() -> void:
 	_title.add_child(_title_best)
 	_title_tap = _label("STEP RIGHT UP!  TAP OR PRESS SPACE", 28)
 	foot.add_child(_title_tap)
-	foot.add_child(_label("Run with the arrow keys or by dragging. The robot aims and fires on its own.", 20, Color("e6dfc8"), true, HAND))
+	foot.add_child(_label("Hold where you want the robot to run (or use the arrow keys). It aims and fires on its own.", 20, Color("e6dfc8"), true, HAND))
 
 
 func _build_cards() -> void:
@@ -418,6 +419,49 @@ func _build_over() -> void:
 	_handmade(again, Color("f2c94c"), 9.0)
 	again.pressed.connect(func() -> void: again_pressed.emit())
 	box.add_child(again)
+
+
+## The two ability buttons at the bottom right, shown once their cards are held. They are not real
+## buttons: Main asks `ability_at` about each new touch, so a thumb can steer and tap at once.
+func set_abilities(jump: bool, dash: bool, dash_ready: bool) -> void:
+	if _abilities.is_empty():
+		for i in 2:
+			var pad := ColorRect.new()
+			pad.anchor_left = 1.0
+			pad.anchor_right = 1.0
+			pad.anchor_top = 1.0
+			pad.anchor_bottom = 1.0
+			pad.offset_left = -150.0 - i * 140.0
+			pad.offset_right = pad.offset_left + 136.0
+			pad.offset_top = -150.0 - i * 26.0
+			pad.offset_bottom = pad.offset_top + 136.0
+			var m := ShaderMaterial.new()
+			m.shader = CRAFT
+			m.set_shader_parameter("base", [Color("8fd94a"), Color("ff8a3a")][i])
+			m.set_shader_parameter("seed", 20.0 + i)
+			m.set_shader_parameter("size", Vector2(136, 136))
+			m.set_shader_parameter("taped", 0.0)
+			pad.material = m
+			_passive(pad)
+			var word := _label(["JUMP", "DASH"][i], 30, INK, false)
+			word.set_anchors_preset(Control.PRESET_FULL_RECT)
+			word.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			word.rotation = [-0.06, 0.05][i]
+			word.pivot_offset = Vector2(68, 68)
+			pad.add_child(word)
+			_root.add_child(pad)
+			_abilities.append(pad)
+	_abilities[0].visible = jump
+	_abilities[1].visible = dash
+	_abilities[1].color = Color.WHITE if dash_ready else Color(0.55, 0.55, 0.6)
+
+
+## Which ability button, if any, is under this point on the screen: "jump", "dash" or "".
+func ability_at(point: Vector2) -> String:
+	for i in _abilities.size():
+		if _abilities[i].visible and _abilities[i].get_global_rect().grow(10.0).has_point(point):
+			return ["jump", "dash"][i]
+	return ""
 
 
 ## Arrows at the screen edges for aliens that are off to the left or right.

@@ -11,7 +11,7 @@ const PLYWOOD := Color("c79a5e")
 const WOOD := preload("res://textures/plywood_color.jpg")
 ## How thick a plywood piece is, and how many layers that thickness is drawn with.
 const THICK := 0.1
-const LAYERS := 5
+const LAYERS := 3
 
 static var _cache := {}
 
@@ -112,6 +112,10 @@ func set_cut(fraction: float) -> void:
 func flash(amount := 1.0) -> void:
 	_flash = amount
 	mat.set_shader_parameter("flash", _flash)
+
+
+func flashing() -> bool:
+	return _flash > 0.0
 
 
 func fade_flash(delta: float) -> void:

@@ -165,6 +165,10 @@ func _take_off(flips: float) -> void:
 	_flips = flips
 
 
+func dash_ready() -> bool:
+	return _dash_cool <= 0.0
+
+
 ## A leap on the engines. Needs the Vertical Takeoff card.
 func jump() -> void:
 	if jump_level == 0 or y > 0.0:

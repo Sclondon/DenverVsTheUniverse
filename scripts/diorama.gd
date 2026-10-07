@@ -10,22 +10,28 @@ const BOX_W := 19.5
 const BOX_H := 17.0
 const BOTTOM := -3.6
 ## The camera looks down on the table from above and a little to the right, like someone leaning over it.
-const PITCH := 0.38
-const YAW := 0.12
+const PITCH := 0.27
+const YAW := 0.0
+## Picture quality, best first: lines the 3D view is drawn at (it is stretched to the window, which is
+## the N64 look and what keeps phones fast), how near a lamp must be to cast shadows, the shadow map
+## size, and whether the lens blurs. Phones start on the second; a slow device drops down by itself.
+const QUALITY := [
+	{"lines": 400.0, "shadows": 28.0, "atlas": 4096, "blur": true},
+	{"lines": 300.0, "shadows": 10.0, "atlas": 2048, "blur": true},
+	{"lines": 240.0, "shadows": 0.0, "atlas": 1024, "blur": false},
+]
 ## The table's districts, south to north, with a lamp over each. PARKS are open ground; the
 ## aliens go for the others (TOWNS).
 const DISTRICTS := [-56.6, -37.7, -18.9, 0.0, 18.9, 37.7, 56.6]
 const NAMES := ["CHERRY\nCREEK", "WASH\nPARK", "CAP\nHILL", "DOWN\nTOWN", "LODO", "CITY\nPARK", "RINO"]
 const PARKS := [1, 5]
 const TOWNS := [-56.6, -18.9, 0.0, 18.9, 56.6]
-## Only the lamps this close to the camera cast shadows.
-const SHADOW_REACH := 28.0
 ## The railway embankment along the back wall: where it is and how high the train rides.
 const TRACK_Z := -10.7
 const TRACK_Y := 2.1
 const TRAIN_SPEED := 2.6
 ## How far the camera turns to look the way the robot is running.
-const SWIVEL := 0.11
+const SWIVEL := 0.06
 ## The front edge of the table, the spacing of the marquee bulbs along it, and how long a searchlight beam is.
 const TABLE_FRONT := 6.25
 const BULB_GAP := 1.1
@@ -52,6 +58,11 @@ var drama := 0.0
 var _drama := 1.0
 var _time := 0.0
 var _beams: Array[Node3D] = []
+var quality := 0
+var _lines := 0.0
+var _shadow_reach := 28.0
+var _slow_t := 0.0
+var _frames := 0
 var _rng := RandomNumberGenerator.new()
 
 
@@ -277,7 +288,30 @@ func _ready() -> void:
 	lens.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	camera.add_child(lens)
 	lens.position.z = -1.0
+	set_quality(1 if OS.has_feature("web_android") or OS.has_feature("web_ios") or OS.has_feature("mobile") else 0)
 	update_camera(0.0, 0.0)
+
+
+## Sets the picture quality (an index into QUALITY).
+func set_quality(level: int) -> void:
+	quality = clampi(level, 0, QUALITY.size() - 1)
+	var q: Dictionary = QUALITY[quality]
+	_lines = q.lines
+	_shadow_reach = q.shadows
+	get_viewport().positional_shadow_atlas_size = q.atlas
+	_lens.set_shader_parameter("blurring", 1.0 if q.blur else 0.0)
+
+
+## Watches the frame rate and steps the quality down if the device cannot keep up.
+func _pace(delta: float) -> void:
+	_slow_t += delta
+	_frames += 1
+	if _slow_t < 2.5:
+		return
+	if _time > 4.0 and _frames / _slow_t < 42.0 and quality < QUALITY.size() - 1:
+		set_quality(quality + 1)
+	_slow_t = 0.0
+	_frames = 0
 
 
 func shake(amount: float) -> void:
@@ -287,6 +321,13 @@ func shake(amount: float) -> void:
 ## Fits the play box to the window and tracks along the table after the robot.
 func update_camera(delta: float, focus_x: float, heading := 0.0) -> void:
 	var view := get_viewport().get_visible_rect().size
+	if delta > 0.0:
+		_pace(delta)
+	# The 3D picture is drawn small, counted along the shorter side of the window, and stretched
+	var window := Vector2(DisplayServer.window_get_size())
+	var scale_3d := clampf(_lines / maxf(minf(window.x, window.y), 1.0), 0.2, 1.0)
+	if not is_equal_approx(get_viewport().scaling_3d_scale, scale_3d):
+		get_viewport().scaling_3d_scale = scale_3d
 	var aspect := view.x / maxf(view.y, 1.0)
 	var t := tan(deg_to_rad(FOV) * 0.5)
 	var dist := maxf(BOX_H * 0.5 / t, BOX_W * 0.5 / (t * aspect))
@@ -306,8 +347,8 @@ func update_camera(delta: float, focus_x: float, heading := 0.0) -> void:
 	# It never sits still: a slow drift round the table and up and down, like a crane shot
 	_time += delta
 	_drama = lerpf(_drama, drama, 1.0 - exp(-1.5 * delta))
-	var yaw := YAW - _swivel + sin(_time * 0.23) * (0.09 + 0.26 * _drama)
-	var pitch := PITCH + sin(_time * 0.17 + 1.0) * 0.03 - 0.08 * _drama
+	var yaw := YAW - _swivel + sin(_time * 0.23) * (0.025 + 0.3 * _drama)
+	var pitch := PITCH + sin(_time * 0.17 + 1.0) * 0.015 - 0.05 * _drama
 	camera.position = target + Vector3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch)) * dist * (1.0 - 0.08 * _drama) + jolt
 	camera.look_at(target + jolt + Vector3(_swivel * 14.0, 0.0, 0.0))
 	for i in _beams.size():
@@ -318,7 +359,7 @@ func update_camera(delta: float, focus_x: float, heading := 0.0) -> void:
 	for car: Array in _train:
 		car[0].position = Vector3(_train_x + car[1], TRACK_Y + absf(sin((_train_x + car[1]) * 6.0)) * 0.015, TRACK_Z)
 	for lamp in _lamps:
-		lamp.shadow_enabled = absf(lamp.position.x - _cam_x) < SHADOW_REACH
+		lamp.shadow_enabled = absf(lamp.position.x - _cam_x) < _shadow_reach
 	for cloud in _clouds:
 		cloud.position.x += delta * 0.25 * cloud.scale.x
 		if cloud.position.x > 84.0:

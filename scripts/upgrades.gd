@@ -53,9 +53,9 @@ const LIST := [
 	{"id": "radar", "name": "Targeting Radar", "kind": "tank", "max": 3, "icon": "i_pierce", "desc": [
 		"The gun locks on to aliens from farther away.", "Farther again.", "It can pick them out right across the sky."]},
 	{"id": "dash", "name": "Vector Dash", "kind": "tank", "max": 2, "icon": "i_treads", "desc": [
-		"Unlocks the dash: flick sideways, press Shift or double-tap a direction. Nothing can hit the robot mid-dash.", "The dash is ready again twice as fast."]},
+		"Unlocks the DASH button (or Shift): a cartwheel the way you are running that nothing can hit you during.", "The dash is ready again twice as fast."]},
 	{"id": "jump", "name": "Vertical Takeoff", "kind": "tank", "max": 2, "icon": "robot", "desc": [
-		"Unlocks the jump: flick up, or press Up or W, to leap over what is coming.", "Leaps higher, and fires half again as fast in the air."]},
+		"Unlocks the JUMP button (or flick up, or Space): a flipping leap over what is coming.", "Leaps higher, and fires half again as fast in the air."]},
 	{"id": "armor", "name": "Extra Armor", "kind": "tank", "max": 3, "icon": "heart", "desc": [
 		"One more heart, and all hearts refilled.", "One more heart, and all hearts refilled.", "One more heart, and all hearts refilled."]},
 	{"id": "repair", "name": "Emergency Repairs", "kind": "city", "max": 999, "icon": "i_wrench", "desc": [
