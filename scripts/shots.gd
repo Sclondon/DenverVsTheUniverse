@@ -15,6 +15,9 @@ class Shot:
 	var splash := 0.0
 	var life := 6.0
 	var dead := false
+	## A shot fired from a back street starts this far back and comes forward as it climbs.
+	var depth := 0.0
+	var rise_from := 0.0
 	var target: Alien
 	## Instance ids of aliens a piercing round has already gone through.
 	var hit: Array[int] = []
@@ -114,6 +117,8 @@ func _advance(s: Shot, delta: float) -> bool:
 	s.pos += s.vel * delta
 	s.position.x = s.pos.x
 	s.position.y = s.pos.y
+	if s.depth != 0.0:
+		s.position.z = s.depth * clampf(1.0 - (s.pos.y - s.rise_from) / 6.0, 0.0, 1.0)
 	if absf(s.pos.x) > City.HALF + 6.0 or s.pos.y > game.diorama.play_top + 4.0 or s.pos.y < -0.6:
 		return true
 

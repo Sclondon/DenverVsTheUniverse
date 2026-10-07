@@ -82,6 +82,12 @@ canopy on the chest, wings folded down the back, engines for calves.
 - **Refits.** The Strike Eagle Refit card adds hearts, damage and a force field that soaks one hit
   and recharges.
 
+## The wingman
+
+A second, orange robot that steers itself: it goes and stands under whichever alien the player is
+furthest from and shoots. It cannot be hurt, stays on the front street, and gets better with the
+Wingman Drills card. It can be switched off in the options.
+
 ## The aliens
 
 Few and large, not a swarm. Each wave is a squad or two of figures marching down Space Invaders
@@ -100,9 +106,17 @@ style over the neighbourhoods nearest the robot; every fifth wave is a mothershi
 
 ## Controls
 
-Phones first. Hold and drag: the robot runs toward your finger and stops the moment you let go. It aims and fires by itself. Jump and Dash appear as two big cardboard
-buttons at the bottom right once their cards are picked. Keyboard: arrows or A/D to run, Space, Up
-or W to jump, Shift to dash.
+Phones first. Hold and drag: the robot runs toward your finger and stops the moment you let go.
+The streets make a ring round the city (the front street, both ends and a road behind the last
+row) with a shortcut through the middle of downtown; at a corner, drag well up or down the screen
+(or use Up/Down, W/S) to take the street that runs front to back. On the back road the camera
+climbs to look over the roofs. It aims and fires by itself. Jump and Dash appear as two big cardboard
+buttons at the bottom right once their cards are picked. Keyboard: arrows or A/D to run, Space to jump, Shift to dash.
+
+## The menu
+
+The title screen has PLAY and OPTIONS. Options, remembered between visits: sound, picture (auto,
+sharp or fast), retro filter, lens blur and wingman.
 
 ## The run
 

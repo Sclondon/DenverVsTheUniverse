@@ -53,6 +53,13 @@ func _run() -> void:
 		await _snap("2_at_%d" % int(x))
 	main.player.x = 0.0
 	main.player.goal_x = 0.0
+	# Round the back of town by the shortcut
+	main.player.goal_z = -16.3
+	await _wait(2.6)
+	await _snap("2_back")
+	main.player.z = 0.0
+	main.player.goal_z = 0.0
+	await _wait(1.5)
 
 	# A mid-run city with most of the defenses up
 	main.levels = {"flak": 3, "blucifer": 2, "dome": 3, "battery": 2, "tesla": 2, "hail": 2, "twin": 2, "chile": 1, "mech": 1, "drone": 2, "rockets": 1, "cow": 1, "watchtower": 1}

@@ -25,6 +25,10 @@ uniform float card = 0.0;
 uniform float mirror = 0.0;
 uniform float flip = 0.0;
 varying vec2 world_xy;
+varying float world_x;
+// Nothing is drawn further than this from the middle of the table (0 = no limit): the backdrop
+// stops where the table does.
+uniform float world_clip = 0.0;
 
 void vertex() {
 	if (flip > 0.5) {
@@ -32,12 +36,16 @@ void vertex() {
 		NORMAL.x = -NORMAL.x;
 	}
 	world_xy = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xy + MODEL_MATRIX[3].z * 3.7;
+	world_x = (MODEL_MATRIX * vec4(VERTEX, 1.0)).x;
 	if (mirror > 0.5) {
 		UV.x = 1.0 - UV.x;
 	}
 }
 
 void fragment() {
+	if (world_clip > 0.0 && abs(world_x) > world_clip) {
+		discard;
+	}
 	vec4 c = texture(tex, UV);
 	if (chunk > 0.0) {
 		vec2 cell = texel * chunk;

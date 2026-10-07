@@ -28,9 +28,14 @@ var city: City
 var swarm: Swarm
 var shots: Shots
 var player: Tank
+## The second robot, which steers itself.
+var wingman: Tank
 var defenses: Defenses
 var fx: Fx
 var hud: Hud
+
+## The menu's options: name -> index of the setting chosen (Hud.OPTIONS lists them).
+var options := {"sound": 1, "picture": 0, "retro": 1, "blur": 1, "wingman": 1}
 
 var _clear_t := 0.0
 var _over_t := 0.0
@@ -64,6 +69,10 @@ func _ready() -> void:
 	player = Tank.new()
 	player.game = self
 	add_child(player)
+	wingman = Tank.new()
+	wingman.game = self
+	wingman.ai = true
+	add_child(wingman)
 	shots = Shots.new()
 	shots.game = self
 	add_child(shots)
@@ -75,11 +84,18 @@ func _ready() -> void:
 	add_child(hud)
 	hud.card_picked.connect(pick_card)
 	hud.again_pressed.connect(start_game)
+	hud.play_pressed.connect(start_game)
+	hud.option_changed.connect(_set_option)
 
 	var cfg := ConfigFile.new()
 	if cfg.load(SAVE) == OK:
 		best = int(cfg.get_value("score", "best", 0))
+		for key: String in options:
+			options[key] = int(cfg.get_value("options", key, options[key]))
+	hud.set_options(options)
+	_apply_options()
 	player.reset()
+	_muster()
 	swarm.spawn_parade()
 	hud.show_title(best)
 
@@ -90,8 +106,11 @@ func _process(delta: float) -> void:
 		State.TITLE:
 			swarm.update(delta)
 			player.update(delta, false)
+			wingman.update(delta, false)
 		State.PLAYING:
 			player.update(delta, true)
+			if wingman.visible:
+				wingman.update(delta, true)
 			swarm.update(delta)
 			defenses.update(delta)
 			shots.update(delta)
@@ -106,6 +125,7 @@ func _process(delta: float) -> void:
 				_wave_cleared()
 		State.CLEARED:
 			player.update(delta, false)
+			wingman.update(delta, false)
 			defenses.update(delta)
 			shots.update(delta)
 			_clear_t -= delta
@@ -119,17 +139,17 @@ func _process(delta: float) -> void:
 		hud.set_stats(score, wave, player.hearts, player.max_hearts, city.percent())
 		_point_at_threats()
 	if _touch != -1 and state in [State.PLAYING, State.CLEARED]:
-		player.goal_x = clampf(_world_x(_touch_at), -Tank.LIMIT, Tank.LIMIT)
+		_steer()
 	hud.set_abilities(state == State.PLAYING and player.jump_level > 0, state == State.PLAYING and player.dash_level > 0, player.dash_ready())
 	diorama.drama = 1.0 if state == State.TITLE else 0.0
-	diorama.update_camera(delta, player.x, player.heading())
+	diorama.update_camera(delta, player.x, player.heading(), player.z)
 
 
 func _unhandled_input(e: InputEvent) -> void:
 	if e is InputEventScreenTouch:
 		if e.pressed:
 			if state == State.TITLE:
-				start_game()
+				# The menu's own buttons start the game
 				return
 			# The two ability buttons, once their cards are held
 			var ability := hud.ability_at(e.position) if state == State.PLAYING else ""
@@ -144,6 +164,7 @@ func _unhandled_input(e: InputEvent) -> void:
 			# It only runs while a finger is down: letting go stops it where it stands
 			_touch = -1
 			player.goal_x = player.x
+			player.goal_z = player.z
 	elif e is InputEventScreenDrag and e.index == _touch:
 		_touch_at = e.position
 		# A flick upward is a jump too
@@ -158,9 +179,6 @@ func _unhandled_input(e: InputEvent) -> void:
 					player.jump()
 			KEY_1, KEY_2, KEY_3:
 				pick_card(e.keycode - KEY_1)
-			KEY_UP, KEY_W:
-				if state == State.PLAYING:
-					player.jump()
 			KEY_SHIFT:
 				if state == State.PLAYING:
 					player.dash(0.0)
@@ -173,7 +191,8 @@ func _unhandled_input(e: InputEvent) -> void:
 				_tap_dir = dir
 				_tap_at = now
 			KEY_M:
-				Sfx.muted = not Sfx.muted
+				_set_option("sound", 1 - int(options.sound))
+				hud.set_options(options)
 
 
 func start_game() -> void:
@@ -184,6 +203,7 @@ func start_game() -> void:
 	defenses.reset()
 	shots.clear()
 	player.reset()
+	_muster()
 	hud.show_game()
 	_next_wave()
 
@@ -194,6 +214,7 @@ func pick_card(index: int) -> void:
 	var u: Dictionary = offer[index]
 	levels[u.id] = int(levels.get(u.id, 0)) + 1
 	player.apply(levels)
+	wingman.enlist(int(levels.get("wingman", 0)))
 	match u.id:
 		"repair":
 			city.repair_each(3)
@@ -382,10 +403,55 @@ func _game_over() -> void:
 	hud.show_over(score, wave, best, reason)
 
 
-func _world_x(screen: Vector2) -> float:
+func _set_option(key: String, value: int) -> void:
+	options[key] = value
+	_apply_options()
+	if saving:
+		var cfg := ConfigFile.new()
+		cfg.load(SAVE)
+		for name: String in options:
+			cfg.set_value("options", name, options[name])
+		cfg.save(SAVE)
+
+
+func _apply_options() -> void:
+	Sfx.muted = options.sound == 0
+	diorama.configure(options.picture, options.retro == 1, options.blur == 1)
+	wingman.visible = options.wingman == 1
+
+
+## Stands the wingman beside the robot, as it first arrives.
+func _muster() -> void:
+	wingman.reset()
+	wingman.visible = options.wingman == 1
+	wingman.x = -5.0
+	wingman.goal_x = -5.0
+	wingman.enlist(0)
+
+
+## Turns where the steering finger is into where the robot should run. Along a street it runs to
+## the spot under the finger. A finger well above or below the robot means the other way: up a
+## street that leads to the back of town (or down one toward the front), where there is one.
+func _steer() -> void:
+	var here := Vector2(player.x, player.z)
+	var view := get_viewport().get_visible_rect().size
+	var off := _touch_at - diorama.camera.unproject_position(Vector3(player.x, 1.6, player.z))
+	if absf(off.y) > view.y * 0.2 and absf(off.y) > absf(off.x) * 1.2:
+		var turn := Roads.snap(here + Vector2(0.0, signf(off.y) * 2.0))
+		if turn.distance_to(here) > 0.3:
+			player.goal_x = turn.x
+			player.goal_z = turn.y
+			return
+	var across := Roads.snap(Vector2(_world_x(_touch_at, player.z), player.z))
+	player.goal_x = across.x
+	player.goal_z = across.y
+
+
+## The x on the table under a point on the screen, at the depth `z`.
+func _world_x(screen: Vector2, z := 0.0) -> float:
 	var from := diorama.camera.project_ray_origin(screen)
 	var dir := diorama.camera.project_ray_normal(screen)
-	return from.x if absf(dir.z) < 0.0001 else from.x - dir.x * from.z / dir.z
+	return from.x if absf(dir.z) < 0.0001 else from.x + dir.x * (z - from.z) / dir.z
 
 
 ## Tells the HUD how many aliens are off each side of the screen, so the player knows where to run.

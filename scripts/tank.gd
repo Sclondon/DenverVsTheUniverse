@@ -26,6 +26,11 @@ const CHASSIS := [
 
 var game
 var x := 0.0
+## How far back from the front street it is (Roads): 0 on the front street, negative behind.
+var z := 0.0
+var goal_z := 0.0
+## The wingman: a second robot that steers itself (see _think) and cannot be hurt.
+var ai := false
 ## Where the driver is steering to; the tank chases it at `speed`.
 var goal_x := 0.0
 var chassis := 0
@@ -59,7 +64,7 @@ var y := 0.0
 var facing := 1.0
 var _vy := 0.0
 ## How far the gun can pick out a target, and the angle it is turned to (0 = straight up).
-var aim_range := 9.0
+var aim_range := 13.0
 var _aim := 0.0
 var _arm_aim := 0.0
 var _dash_t := 0.0
@@ -72,6 +77,8 @@ var _land := 0.0
 var _spin_t := 0.0
 var _spin_dir := 1.0
 var _was_facing := 1.0
+var _dir := Vector2.RIGHT
+var _lean_z := 0.0
 var _bubble: MeshInstance3D
 var _bubble_mat: ShaderMaterial
 var _power := 0.0
@@ -104,7 +111,9 @@ func reset() -> void:
 	_dash_t = 0.0
 	_dash_cool = 0.0
 	x = 0.0
+	z = 0.0
 	goal_x = 0.0
+	goal_z = 0.0
 	invuln = 0.0
 	overdrive = 0.0
 	_field = 0.0
@@ -129,7 +138,7 @@ func apply(levels: Dictionary) -> void:
 	max_hearts = BASE_HEARTS + int(levels.get("armor", 0)) + int(CHASSIS[chassis].hearts)
 	rockets = int(levels.get("rockets", 0))
 	dash_level = int(levels.get("dash", 0))
-	aim_range = 9.0 + 4.0 * int(levels.get("radar", 0))
+	aim_range = 13.0 + 4.0 * int(levels.get("radar", 0))
 	jump_level = int(levels.get("jump", 0))
 	var drones := int(levels.get("drone", 0))
 	while _drones.size() > drones:
@@ -145,6 +154,10 @@ func dash(dir: float) -> void:
 	if dash_level == 0 or _dash_cool > 0.0:
 		return
 	_dash_dir = signf(dir) if dir != 0.0 else facing
+	# It dashes on down the street it is on
+	var ahead := Roads.snap(Vector2(x, z) + (Vector2(_dash_dir, 0.0) if dir != 0.0 else _dir) * 9.0)
+	goal_x = ahead.x
+	goal_z = ahead.y
 	_dash_t = DASH_TIME
 	_dash_cool = 1.6 if dash_level == 1 else 0.8
 	invuln = maxf(invuln, DASH_TIME + 0.1)
@@ -199,23 +212,42 @@ func absorb() -> bool:
 
 
 func update(delta: float, firing: bool) -> void:
-	var axis := 0.0
-	if Input.is_key_pressed(KEY_LEFT) or Input.is_key_pressed(KEY_A):
-		axis -= 1.0
-	if Input.is_key_pressed(KEY_RIGHT) or Input.is_key_pressed(KEY_D):
-		axis += 1.0
-	if axis != 0.0:
-		goal_x = x + axis
-	goal_x = clampf(goal_x, -LIMIT, LIMIT)
+	var here := Vector2(x, z)
+	if ai:
+		_think()
+	else:
+		# Keys push it along whichever street it is on; at a corner they pick the street
+		var push := Vector2.ZERO
+		if Input.is_key_pressed(KEY_LEFT) or Input.is_key_pressed(KEY_A):
+			push.x -= 1.0
+		if Input.is_key_pressed(KEY_RIGHT) or Input.is_key_pressed(KEY_D):
+			push.x += 1.0
+		if Input.is_key_pressed(KEY_UP) or Input.is_key_pressed(KEY_W):
+			push.y -= 1.0
+		if Input.is_key_pressed(KEY_DOWN) or Input.is_key_pressed(KEY_S):
+			push.y += 1.0
+		if push != Vector2.ZERO:
+			var want := Roads.snap(here + push * 1.6)
+			goal_x = want.x
+			goal_z = want.y
+	var goal := Roads.snap(Vector2(goal_x, goal_z))
+	goal_x = goal.x
+	goal_z = goal.y
 	var before := x
-	x = move_toward(x, goal_x, speed * delta)
-	if x != before:
-		facing = signf(x - before)
 	_dash_cool = maxf(0.0, _dash_cool - delta)
+	var pace_now := speed
 	if _dash_t > 0.0:
 		_dash_t -= delta
-		x = clampf(x + _dash_dir * DASH_SPEED * delta, -LIMIT, LIMIT)
-		goal_x = x
+		pace_now = DASH_SPEED
+	var moved := here.move_toward(Roads.route(here, goal), pace_now * delta)
+	if moved != here:
+		_dir = (moved - here).normalized()
+		if absf(_dir.x) > 0.3:
+			facing = signf(_dir.x)
+		_run += moved.distance_to(here) * 2.3 / SIZE
+	x = moved.x
+	z = moved.y
+	_lean_z = lerpf(_lean_z, (moved.y - here.y) / maxf(delta, 0.001) / speed, 1.0 - exp(-10.0 * delta))
 	if y > 0.0 or _vy > 0.0:
 		_vy -= GRAVITY * delta
 		y = maxf(0.0, y + _vy * delta)
@@ -258,7 +290,7 @@ func update(delta: float, firing: bool) -> void:
 	_bubble.scale = Vector3.ONE * (1.0 + (1.0 - _pop) * 0.25 * signf(_pop))
 	_bubble_mat.set_shader_parameter("power", _power)
 	_bubble_mat.set_shader_parameter("pop", _pop)
-	position = Vector3(x, y + absf(sin(_run)) * 0.1 * clampf(absf(_lean), 0.0, 1.0), 0.0)
+	position = Vector3(x, y + absf(sin(_run)) * 0.1 * clampf(Vector2(_lean, _lean_z).length(), 0.0, 1.0), z)
 	rotation.z = 0.0
 	var squash := maxf(_recoil * 0.03, _land * 0.5)
 	scale = Vector3(1.0 + squash * 0.8, 1.0 - squash, 1.0) * SIZE
@@ -269,9 +301,7 @@ func update(delta: float, firing: bool) -> void:
 ## pumping), spins on its heel when it doubles back, cartwheels through a dash and tucks into a
 ## flip off the ground. Through all of it the gun arm stays on its target.
 func _acrobatics(delta: float) -> void:
-	var pace := clampf(absf(_lean), 0.0, 1.0)
-	_run += absf(x - _ran_from) * 2.3 / SIZE
-	_ran_from = x
+	var pace := clampf(Vector2(_lean, _lean_z).length(), 0.0, 1.0)
 	_land = maxf(0.0, _land - delta)
 	if facing != _was_facing and pace > 0.45 and _spin_t <= 0.0:
 		_spin_t = SPIN_TIME
@@ -287,7 +317,8 @@ func _acrobatics(delta: float) -> void:
 		limbs["knee_" + side].rotation.x = 0.06 + pace * (0.25 + 1.15 * maxf(0.0, -cos(phase)))
 	limbs.arm_l.rotation = Vector3(-sin(_run) * 0.9 * pace + breath * 0.03, 0.0, -0.08)
 	limbs.elbow_l.rotation.x = -0.15 - 1.25 * pace
-	var yaw := _lean * 1.15
+	# It turns to face the way it is running: side on along a street, its back to us going away
+	var yaw := atan2(_lean, _lean_z + 0.35) * pace
 	var roll := 0.0
 	var flip := 0.0
 	var lean := 0.24 * pace
@@ -332,6 +363,34 @@ func _acrobatics(delta: float) -> void:
 	limbs.arm_r.basis = Basis(Quaternion(Vector3.UP, at.normalized())) * Basis(Vector3.RIGHT, PI)
 
 
+## Sets the wingman up at this level of the Wingman Drills card (0 = as it first arrives).
+func enlist(level: int) -> void:
+	ai = true
+	set_tint(Color(1.0, 0.74, 0.46))
+	speed = 9.0 + level
+	fire_rate = 1.3 + 0.45 * level
+	damage = 1.0 + floorf(level * 0.5)
+	barrels = 2 if level >= 3 else 1
+	aim_range = 11.0 + 2.5 * level
+
+
+## The wingman's whole mind: go and stand under the alien its leader is furthest from, and never
+## crowd the leader.
+func _think() -> void:
+	var lead: Tank = game.player
+	var pick: Alien = null
+	for a: Alien in game.swarm.aliens:
+		if a.dead or a.pos.y > game.diorama.play_top + 1.0:
+			continue
+		if pick == null or absf(a.pos.x - lead.x) > absf(pick.pos.x - lead.x):
+			pick = a
+	var want := lead.x - 6.0 * lead.facing if pick == null else pick.pos.x - GUN_X
+	if absf(want - lead.x) < 3.5 and lead.z > -2.0:
+		want = lead.x + (3.5 if x > lead.x else -3.5)
+	goal_x = clampf(want, -LIMIT, LIMIT)
+	goal_z = 0.0
+
+
 ## The nearest alien within reach of the gun, or null.
 func _target(from: Vector2) -> Alien:
 	var found: Alien = null
@@ -356,5 +415,9 @@ func _fire(muzzle: float) -> void:
 	for i in barrels:
 		var off := (i - (barrels - 1) * 0.5) * 0.34
 		var ang := _aim + off * 0.16
-		game.shots.fire("bullet", from + Vector2(off, 0.0), Vector2(sin(ang), cos(ang)) * 22.0, damage, pierce, splash)
+		var dart: Shots.Shot = game.shots.fire("bullet", from + Vector2(off, 0.0), Vector2(sin(ang), cos(ang)) * 22.0, damage, pierce, splash)
+		# Fired from a back street, it climbs forward to the plane the aliens hang in
+		dart.depth = z
+		dart.rise_from = muzzle
+		dart.position.z = z
 	Sfx.play("shoot", randf_range(0.78, 0.9), -9.0)

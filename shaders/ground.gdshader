@@ -17,6 +17,9 @@ uniform vec2 mat_z = vec2(-28.6, 7.9);
 uniform vec2 parks = vec2(-37.7, 37.7);
 uniform float park_half = 9.3;
 uniform vec3 lake = vec3(-6.4, 5.6, 2.3);
+// Where the road behind the city and the two end roads run (Roads.BACK, Roads.SIDE).
+uniform float back_z = -16.3;
+uniform float side_x = 65.5;
 varying vec3 wp;
 varying float top;
 
@@ -52,11 +55,17 @@ void fragment() {
 		nm = mix(nm, vec3(0.5, 0.5, 1.0), water);
 		rough = mix(rough, 0.04, water);
 		// The street, with its kerbs and centre line
-		float road = step(abs(wp.z), 1.05);
+		// The streets: the front one, the one behind the city, the two ends and the shortcut
+		float way = min(abs(wp.z), abs(wp.z - back_z));
+		if (wp.z < 0.0 && wp.z > back_z) {
+			way = min(way, min(abs(abs(wp.x) - side_x), abs(wp.x) + 0.2));
+		}
+		way += step(side_x + 1.05, abs(wp.x)) * 9.0;
+		float road = step(way, 1.05);
 		vec2 auv = wp.xz * 0.3;
 		vec3 asphalt = texture(asphalt_c, auv).rgb * 0.55;
-		asphalt = mix(asphalt, vec3(0.86, 0.68, 0.2), step(abs(wp.z), 0.045) * step(fract(wp.x * 0.5), 0.5) * 0.85);
-		asphalt = mix(asphalt, vec3(0.62, 0.61, 0.58) * (0.8 + 0.4 * texture(asphalt_c, auv * 2.0).g), step(0.82, abs(wp.z)));
+		asphalt = mix(asphalt, vec3(0.86, 0.68, 0.2), step(way, 0.045) * step(fract((wp.x + wp.z) * 0.5), 0.5) * 0.85);
+		asphalt = mix(asphalt, vec3(0.62, 0.61, 0.58) * (0.8 + 0.4 * texture(asphalt_c, auv * 2.0).g), step(0.82, way));
 		col = mix(col, asphalt, road);
 		nm = mix(nm, texture(asphalt_n, auv).rgb, road);
 		rough = mix(rough, 0.82, road);

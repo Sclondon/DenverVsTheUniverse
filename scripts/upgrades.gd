@@ -52,6 +52,8 @@ const LIST := [
 		"The robot runs 20% faster.", "Faster again.", "Top speed."]},
 	{"id": "radar", "name": "Targeting Radar", "kind": "tank", "max": 3, "icon": "i_pierce", "desc": [
 		"The gun locks on to aliens from farther away.", "Farther again.", "It can pick them out right across the sky."]},
+	{"id": "wingman", "name": "Wingman Drills", "kind": "tank", "max": 4, "icon": "robot", "desc": [
+		"Your wingman shoots faster and from farther off.", "Faster again, and its darts hit harder.", "Twin barrels for the wingman.", "The wingman at its best: fastest, hardest, farthest."]},
 	{"id": "dash", "name": "Vector Dash", "kind": "tank", "max": 2, "icon": "i_treads", "desc": [
 		"Unlocks the DASH button (or Shift): a cartwheel the way you are running that nothing can hit you during.", "The dash is ready again twice as fast."]},
 	{"id": "jump", "name": "Vertical Takeoff", "kind": "tank", "max": 2, "icon": "robot", "desc": [

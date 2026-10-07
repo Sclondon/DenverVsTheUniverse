@@ -30,21 +30,23 @@ const SIZES := {"tall": 1.5, "mid": 1.0, "low": 0.62}
 const MAX_HEIGHT := 4.9
 ## World units a foot of real building is built to: Republic Plaza (714 ft) comes out 8 units tall.
 const FOOT := 8.0 / 714.0
+## Half the width kept clear for the street that cuts through the middle of downtown.
+const SHORTCUT := 0.85
 ## Denver's eight tallest buildings, at their true heights relative to each other (feet, from
 ## Wikipedia's list of tallest buildings in Denver) and in the left-to-right order of the skyline
 ## photograph in conceptart/. Four Seasons and 1144 Fifteenth were built after that photograph, so
 ## where they stand is a guess. Then the low landmarks along the street. id, art, x, z, feet (0 = as drawn).
 const LANDMARKS := [
-	["fourseasons", "fourseasons", -6.9, -3.3, 639.0],
-	["cash", "cash", -4.7, -2.6, 698.0],
-	["republic", "republic", -2.0, -3.4, 714.0],
-	["b707", "orange", -0.6, -2.5, 522.0],
-	["qwest", "qwest", 1.3, -3.2, 507.0],
-	["b1144", "b1144", 3.0, -2.5, 602.0],
-	["b1999", "b1999", 4.8, -3.4, 544.0],
-	["c1801", "c1801", 6.6, -2.7, 709.0],
-	["df", "df", -8.4, -1.9, 0.0],
-	["union", "union", -5.4, -1.2, 0.0], ["capitol", "capitol", 0.0, -1.2, 0.0], ["bear", "bear", 5.4, -1.2, 0.0],
+	["fourseasons", "fourseasons", -9.0, -3.3, 639.0],
+	["cash", "cash", -6.5, -2.6, 698.0],
+	["republic", "republic", -3.2, -3.4, 714.0],
+	["b707", "orange", 2.7, -2.6, 522.0],
+	["qwest", "qwest", 4.7, -3.5, 507.0],
+	["b1144", "b1144", 6.4, -2.5, 602.0],
+	["b1999", "b1999", 8.1, -3.5, 544.0],
+	["c1801", "c1801", 10.6, -2.7, 709.0],
+	["df", "df", -10.8, -1.9, 0.0],
+	["union", "union", -6.0, -1.2, 0.0], ["capitol", "capitol", -2.8, -1.2, 0.0], ["bear", "bear", 5.4, -1.2, 0.0],
 ]
 ## Rows of filler, back to front: from x, to x, z, heights to draw from, widest gap, tint.
 const ROWS := [
@@ -53,9 +55,9 @@ const ROWS := [
 	[-7.6, 7.6, -1.9, ["mid", "low"], 0.4, "f0f0fa"],
 	[-7.8, 7.8, -1.8, ["low"], 0.5, "ffffff"],
 	# Cherry Creek: tidy mid-rises
-	[-65.4, -48.0, -4.0, ["mid"], 0.5, "c6cee6"],
-	[-65.0, -48.2, -2.8, ["mid", "low"], 0.6, "e6eeff"],
-	[-65.4, -48.0, -1.5, ["low"], 0.5, "f2f6ff"],
+	[-63.8, -48.0, -4.0, ["mid"], 0.5, "c6cee6"],
+	[-63.6, -48.2, -2.8, ["mid", "low"], 0.6, "e6eeff"],
+	[-63.8, -48.0, -1.5, ["low"], 0.5, "f2f6ff"],
 	# Capitol Hill: old apartment blocks
 	[-27.6, -10.6, -4.0, ["mid", "low"], 0.5, "d8c8c0"],
 	[-27.4, -10.8, -2.8, ["low", "mid", "low"], 0.6, "f0e0d6"],
@@ -65,9 +67,9 @@ const ROWS := [
 	[10.8, 27.4, -2.8, ["low"], 0.5, "ffd2c0"],
 	[10.6, 27.6, -1.5, ["low"], 0.7, "ffdccc"],
 	# RiNo: warehouses in loud paint
-	[48.0, 65.4, -4.0, ["low", "mid", "low"], 0.7, "ffb0d8"],
-	[48.2, 65.0, -2.8, ["low"], 0.6, "b0f0e0"],
-	[48.0, 65.4, -1.5, ["low"], 0.8, "ffe6a0"],
+	[48.0, 63.8, -4.0, ["low", "mid", "low"], 0.7, "ffb0d8"],
+	[48.2, 63.6, -2.8, ["low"], 0.6, "b0f0e0"],
+	[48.0, 63.8, -1.5, ["low"], 0.8, "ffe6a0"],
 	# The parks: just the houses along their far side
 	[-46.6, -28.8, -14.4, ["low"], 0.9, "d8d8e6"],
 	[28.8, 46.6, -14.4, ["low"], 0.9, "d8d8e6"],
@@ -80,7 +82,7 @@ const ROWS := [
 ## The city is deep as well as long. Every built-up stretch (from x, to x) also gets these rows:
 ## z, heights to draw from, widest gap, tint. Behind the street they run back to the foothills,
 ## dimmer with distance; this side of it they run to the table edge, low so the robot stays in view.
-const STRETCHES := [[-65.5, -48.0], [-27.6, 27.6], [48.0, 65.5]]
+const STRETCHES := [[-63.9, -48.0], [-27.6, 27.6], [48.0, 63.9]]
 const DEPTH := [
 	[-5.8, ["mid", "low", "tall"], 0.3, "c0c0de"],
 	[-7.1, ["low", "mid"], 0.3, "b8b8d8"],
@@ -88,7 +90,7 @@ const DEPTH := [
 	[-10.0, ["low", "mid"], 0.4, "a8a8cc"],
 	[-11.6, ["low"], 0.5, "a0a0c6"],
 	[-13.3, ["low"], 0.5, "9898c0"],
-	[-15.1, ["low"], 0.6, "9090ba"],
+	[-14.6, ["low"], 0.6, "9090ba"],
 	[1.9, ["low"], 0.9, "ffffff"],
 	[2.9, ["low"], 0.6, "f4f4ff"],
 	[4.0, ["low"], 0.5, "ececfa"],
@@ -148,6 +150,12 @@ func _ready() -> void:
 			var kinds: Array = ART[kind]
 			var b := _add(kinds[rng.randi() % kinds.size()], 0.0, row[2] + rng.randf_range(-0.12, 0.12), "", rng.randf() < 0.5, SIZES[kind] * rng.randf_range(0.88, 1.12))
 			b.x = x + b.half_w
+			# Nothing is built on the shortcut through the middle of town
+			if row[2] < 0.0 and absf(b.x) < b.half_w + SHORTCUT:
+				buildings.pop_back()
+				b.node.queue_free()
+				x = SHORTCUT
+				continue
 			b.node.position.x = b.x
 			b.node.set_tint(Color(row[5]))
 			x += b.half_w * 2.0 + rng.randf_range(0.0, row[4])

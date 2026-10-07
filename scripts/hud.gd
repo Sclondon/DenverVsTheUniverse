@@ -4,6 +4,9 @@ extends CanvasLayer
 
 signal card_picked(index: int)
 signal again_pressed
+signal play_pressed
+## An option on the menu was changed: its name and the index of its new setting.
+signal option_changed(key: String, value: int)
 
 const INK := Color("22223b")
 const PAPER := Color("f6f3ea")
@@ -40,6 +43,10 @@ var _over: Control
 var _over_lines: Array[Label] = []
 var _time := 0.0
 var _threats: Array[Label] = []
+var _menu: HBoxContainer
+var _options: Control
+var _option_rows: Array[Button] = []
+var _settings := {}
 var _abilities: Array[ColorRect] = []
 
 
@@ -113,6 +120,7 @@ func show_title(best: int) -> void:
 
 func show_game() -> void:
 	_title.visible = false
+	_options.visible = false
 	_cards.visible = false
 	_over.visible = false
 	_bar.visible = true
@@ -287,16 +295,19 @@ func _build_title() -> void:
 	var foot := VBoxContainer.new()
 	foot.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	foot.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	foot.offset_bottom = -58
+	foot.offset_bottom = -34
 	foot.add_theme_constant_override("separation", -2)
 	_passive(foot)
 	_title.add_child(foot)
 	_title_best = _label("", 22, GOLD)
 	_title_best.position = Vector2(14, 10)
 	_title.add_child(_title_best)
-	_title_tap = _label("STEP RIGHT UP!  TAP OR PRESS SPACE", 28)
+	_title_tap = _label("STEP RIGHT UP!", 28)
 	foot.add_child(_title_tap)
-	foot.add_child(_label("Hold and drag to run: the robot follows your finger and stops when you let go. It aims and fires on its own.", 20, Color("e6dfc8"), true, HAND))
+	_build_menu()
+	foot.add_child(_menu)
+	foot.add_child(_passive(_gap(8)))
+	foot.add_child(_label("Hold and drag to run; drag up or down at a corner to take the other street. The robots aim and fire on their own.", 20, Color("e6dfc8"), true, HAND))
 
 
 func _build_cards() -> void:
@@ -483,3 +494,80 @@ func set_threats(left: int, right: int) -> void:
 	for l in _threats:
 		l.visible = _bar.visible
 		l.modulate.a = 0.6 + 0.4 * sin(_time * 8.0)
+
+
+# --- The main menu and its options ---------------------------------------------------------------
+
+## What each option is called and the words for each of its settings, in the order they cycle.
+const OPTIONS := [
+	["sound", "SOUND", ["OFF", "ON"]],
+	["picture", "PICTURE", ["AUTO", "SHARP", "FAST"]],
+	["retro", "RETRO FILTER", ["OFF", "ON"]],
+	["blur", "LENS BLUR", ["OFF", "ON"]],
+	["wingman", "WINGMAN", ["OFF", "ON"]],
+]
+
+
+## A cardboard button with marker lettering.
+func _sign(words: String, board: Color, size: Vector2, seed: float) -> Button:
+	var b := Button.new()
+	b.text = words
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = size
+	b.add_theme_font_size_override("font_size", 30)
+	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		b.add_theme_color_override(state, INK)
+	_handmade(b, board, seed)
+	return b
+
+
+func _build_menu() -> void:
+	_menu = HBoxContainer.new()
+	_menu.alignment = BoxContainer.ALIGNMENT_CENTER
+	_menu.add_theme_constant_override("separation", 10)
+	var play := _sign("PLAY", Color("f2c94c"), Vector2(300, 96), 31.0)
+	play.add_theme_font_size_override("font_size", 40)
+	play.pressed.connect(func() -> void: play_pressed.emit())
+	_menu.add_child(play)
+	var options := _sign("OPTIONS", CARDBOARD, Vector2(260, 96), 32.0)
+	options.pressed.connect(func() -> void: _options.visible = true)
+	_menu.add_child(options)
+
+	_options = Control.new()
+	_options.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_options.visible = false
+	_root.add_child(_options)
+	var dim := ColorRect.new()
+	dim.color = Color(0.03, 0.03, 0.1, 0.72)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_options.add_child(dim)
+	var box := VBoxContainer.new()
+	box.set_anchors_preset(Control.PRESET_FULL_RECT)
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_theme_constant_override("separation", -6)
+	_passive(box)
+	_options.add_child(box)
+	box.add_child(_label("OPTIONS", 48, GOLD, true, POSTER))
+	box.add_child(_passive(_gap(14)))
+	for i in OPTIONS.size():
+		var row := _sign("", CARDBOARD, Vector2(520, 84), 40.0 + i)
+		row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		row.pressed.connect(func() -> void:
+			var key: String = OPTIONS[i][0]
+			_settings[key] = (int(_settings.get(key, 0)) + 1) % OPTIONS[i][2].size()
+			set_options(_settings)
+			option_changed.emit(key, int(_settings[key])))
+		box.add_child(row)
+		_option_rows.append(row)
+	box.add_child(_passive(_gap(14)))
+	var back := _sign("BACK", Color("f2c94c"), Vector2(260, 84), 49.0)
+	back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	back.pressed.connect(func() -> void: _options.visible = false)
+	box.add_child(back)
+
+
+## Shows the options as they are now set (option name -> index of its setting).
+func set_options(settings: Dictionary) -> void:
+	_settings = settings
+	for i in OPTIONS.size():
+		_option_rows[i].text = "%s:  %s" % [OPTIONS[i][1], OPTIONS[i][2][int(settings.get(OPTIONS[i][0], 0))]]

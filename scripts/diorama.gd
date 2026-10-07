@@ -10,7 +10,14 @@ const BOX_W := 22.0
 const BOX_H := 19.0
 const BOTTOM := -3.6
 ## The camera looks down on the table from above and a little to the right, like someone leaning over it.
-const PITCH := 0.27
+const PITCH := 0.13
+## How steeply it looks down once the robot is on the road behind the city, to see over the roofs.
+const PITCH_DEEP := 0.62
+## Half the length of the table and everything on it: the room is dark beyond.
+const EDGE := City.HALF + 4.0
+## How far each mountain layer slides with the camera, as a share of its travel: far ones more, so
+## the range seems to hang back as the robot runs.
+const PARALLAX := {"m_far": 0.34, "m_mid": 0.2, "m_near": 0.09}
 const YAW := 0.0
 ## Picture quality, best first: lines the 3D view is drawn at (it is stretched to the window, which is
 ## the N64 look and what keeps phones fast), how near a lamp must be to cast shadows, the shadow map
@@ -58,7 +65,15 @@ var drama := 0.0
 var _drama := 1.0
 var _time := 0.0
 var _beams: Array[Node3D] = []
+## The mountain boards: each with where it stands and how far it slides with the camera.
+var _ridges: Array = []
+var _deep := 0.0
 var quality := 0
+## The menu's picture options: whether quality may step down by itself, whether the picture is drawn
+## small and dithered (the retro look), and whether the lens blurs.
+var auto_pace := true
+var retro := true
+var lens_blur := true
 var _lines := 0.0
 var _shadow_reach := 28.0
 var _slow_t := 0.0
@@ -115,10 +130,10 @@ func _ready() -> void:
 
 	var board := MeshInstance3D.new()
 	var board_quad := QuadMesh.new()
-	board_quad.size = Vector2(250.0, 50.0)
+	board_quad.size = Vector2(EDGE * 2.0, 50.0)
 	board.mesh = board_quad
 	var paint := _shader("res://shaders/sky.gdshader")
-	paint.set_shader_parameter("cells", Vector2(500.0, 100.0))
+	paint.set_shader_parameter("cells", Vector2(280.0, 100.0))
 	paint.set_shader_parameter("horizon", 0.04)
 	paint.set_shader_parameter("height", 0.5)
 	board.material_override = paint
@@ -127,13 +142,15 @@ func _ready() -> void:
 
 	var table := MeshInstance3D.new()
 	var box := BoxMesh.new()
-	box.size = Vector3(250.0, 2.6, 39.6)
+	box.size = Vector3(EDGE * 2.0, 2.6, 39.6)
 	table.mesh = box
 	var ground := _shader("res://shaders/ground.gdshader")
 	for tex: String in ["planks_c", "planks_n", "planks_r", "grass_c", "grass_n", "asphalt_c", "asphalt_n"]:
 		var kind: String = {"c": "color", "n": "normal", "r": "rough"}[tex.get_slice("_", 1)]
 		ground.set_shader_parameter(tex, load("res://textures/%s_%s.jpg" % [tex.get_slice("_", 0), kind]))
 	ground.set_shader_parameter("mat_half", Vector2(City.HALF + 2.5, 0.0))
+	ground.set_shader_parameter("back_z", Roads.BACK)
+	ground.set_shader_parameter("side_x", Roads.SIDE)
 	ground.set_shader_parameter("parks", Vector2(DISTRICTS[PARKS[0]], DISTRICTS[PARKS[1]]))
 	table.material_override = ground
 	table.position = Vector3(0.0, -1.3, -11.2)
@@ -152,7 +169,7 @@ func _ready() -> void:
 	add_child(moon)
 	for i in 14:
 		var cloud := Cutout.make("cloud")
-		cloud.position = Vector3(-78.0 + i * 12.0 + _rng.randf_range(-3.0, 3.0), _rng.randf_range(12.0, 16.0), _rng.randf_range(-24.0, -20.0))
+		cloud.position = Vector3(-EDGE + 4.0 + i * 10.0 + _rng.randf_range(-3.0, 3.0), _rng.randf_range(12.0, 16.0), _rng.randf_range(-24.0, -20.0))
 		cloud.scale = Vector3.ONE * _rng.randf_range(0.9, 1.5)
 		cloud.set_tint(Color(0.95, 0.8, 0.9))
 		_hang(cloud)
@@ -169,7 +186,7 @@ func _ready() -> void:
 	# The parks: plywood trees scattered round the lake, a few this side of the street
 	for park: int in PARKS:
 		for i in 64:
-			var at := Vector3(_rng.randf_range(-9.0, 9.0), 0.0, _rng.randf_range(-15.6, -1.6) if i < 50 else _rng.randf_range(2.2, 7.6))
+			var at := Vector3(_rng.randf_range(-9.0, 9.0), 0.0, _rng.randf_range(-14.6, -1.6) if i < 50 else _rng.randf_range(2.2, 7.6))
 			# Not in the water
 			if Vector2(at.x / 6.4, (at.z + 6.4) / 3.0).length() < 1.0:
 				continue
@@ -183,7 +200,7 @@ func _ready() -> void:
 	# The railway along the back wall: a gravel embankment and a freight train that never stops
 	var bank := MeshInstance3D.new()
 	var bank_box := BoxMesh.new()
-	bank_box.size = Vector3(2.0 * City.HALF + 20.0, TRACK_Y, 0.9)
+	bank_box.size = Vector3(EDGE * 2.0, TRACK_Y, 0.9)
 	bank.mesh = bank_box
 	var gravel := StandardMaterial3D.new()
 	gravel.albedo_texture = load("res://textures/asphalt_color.jpg")
@@ -199,6 +216,7 @@ func _ready() -> void:
 		var car := Cutout.make("px/" + art, City.PPU, true)
 		car.mat.set_shader_parameter("chunk", 5.0)
 		car.add_backing()
+		car.mat.set_shader_parameter("world_clip", EDGE)
 		add_child(car)
 		along -= car.size.x * 0.5 - Cutout.PAD / City.PPU
 		_train.append([car, along])
@@ -214,9 +232,9 @@ func _ready() -> void:
 	var row := MultiMesh.new()
 	row.transform_format = MultiMesh.TRANSFORM_3D
 	row.mesh = bulb
-	row.instance_count = int((2.0 * City.HALF + 16.0) / BULB_GAP) * 2
+	row.instance_count = int(EDGE * 2.0 / BULB_GAP) * 2
 	for i in row.instance_count:
-		var bulb_x := -City.HALF - 8.0 + (i / 2) * BULB_GAP
+		var bulb_x := -EDGE + 0.4 + (i / 2) * BULB_GAP
 		# Two strings: along the lip of the table and along its front board
 		row.set_instance_transform(i, Transform3D(Basis.IDENTITY, Vector3(bulb_x + (i % 2) * BULB_GAP * 0.5, 0.12 if i % 2 == 0 else -1.2, TABLE_FRONT + (-0.2 if i % 2 == 0 else 0.08))))
 	var marquee := MultiMeshInstance3D.new()
@@ -296,10 +314,21 @@ func _ready() -> void:
 func set_quality(level: int) -> void:
 	quality = clampi(level, 0, QUALITY.size() - 1)
 	var q: Dictionary = QUALITY[quality]
-	_lines = q.lines
+	_lines = q.lines if retro else 0.0
+	_lens.set_shader_parameter("levels", 64.0 if retro else 0.0)
 	_shadow_reach = q.shadows
 	get_viewport().positional_shadow_atlas_size = q.atlas
-	_lens.set_shader_parameter("blurring", 1.0 if q.blur else 0.0)
+	_lens.set_shader_parameter("blurring", 1.0 if q.blur and lens_blur else 0.0)
+
+
+## Applies the menu's picture options. `picture`: 0 = start at what suits the device and step down
+## if it struggles, 1 = always the sharpest, 2 = always the fastest.
+func configure(picture: int, retro_on: bool, blur_on: bool) -> void:
+	retro = retro_on
+	lens_blur = blur_on
+	auto_pace = picture == 0
+	var phone := OS.has_feature("web_android") or OS.has_feature("web_ios") or OS.has_feature("mobile")
+	set_quality([1 if phone else 0, 0, QUALITY.size() - 1][picture])
 
 
 ## Watches the frame rate and steps the quality down if the device cannot keep up.
@@ -319,13 +348,13 @@ func shake(amount: float) -> void:
 
 
 ## Fits the play box to the window and tracks along the table after the robot.
-func update_camera(delta: float, focus_x: float, heading := 0.0) -> void:
+func update_camera(delta: float, focus_x: float, heading := 0.0, focus_z := 0.0) -> void:
 	var view := get_viewport().get_visible_rect().size
-	if delta > 0.0:
+	if delta > 0.0 and auto_pace:
 		_pace(delta)
 	# The 3D picture is drawn small, counted along the shorter side of the window, and stretched
 	var window := Vector2(DisplayServer.window_get_size())
-	var scale_3d := clampf(_lines / maxf(minf(window.x, window.y), 1.0), 0.2, 1.0)
+	var scale_3d := clampf(_lines / maxf(minf(window.x, window.y), 1.0), 0.2, 1.0) if _lines > 0.0 else 1.0
 	if not is_equal_approx(get_viewport().scaling_3d_scale, scale_3d):
 		get_viewport().scaling_3d_scale = scale_3d
 	var aspect := view.x / maxf(view.y, 1.0)
@@ -348,22 +377,28 @@ func update_camera(delta: float, focus_x: float, heading := 0.0) -> void:
 	_time += delta
 	_drama = lerpf(_drama, drama, 1.0 - exp(-1.5 * delta))
 	var yaw := YAW - _swivel + sin(_time * 0.23) * (0.025 + 0.3 * _drama)
-	var pitch := PITCH + sin(_time * 0.17 + 1.0) * 0.015 - 0.05 * _drama
+	# On the road behind the city the camera climbs to look over the roofs, and looks further in
+	_deep = lerpf(_deep, clampf(focus_z / Roads.BACK, 0.0, 1.0), 1.0 - exp(-2.5 * delta)) if delta > 0.0 else 0.0
+	var pitch := lerpf(PITCH, PITCH_DEEP, _deep) + sin(_time * 0.17 + 1.0) * 0.015 + 0.1 * _drama
+	target.z = Roads.BACK * 0.45 * _deep
+	_lens.set_shader_parameter("sharp", 4.6 + 13.0 * _deep)
+	for r: Array in _ridges:
+		r[0].position.x = r[1] + _cam_x * r[2]
 	camera.position = target + Vector3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch)) * dist * (1.0 - 0.08 * _drama) + jolt
 	camera.look_at(target + jolt + Vector3(_swivel * 14.0, 0.0, 0.0))
 	for i in _beams.size():
 		_beams[i].rotation = Vector3(-0.25 + sin(_time * 0.31 + i * 2.1) * 0.2, 0.0, sin(_time * 0.47 + i * 1.7) * 0.6)
 	_train_x += TRAIN_SPEED * delta
-	if _train_x > City.HALF + 40.0:
-		_train_x = -City.HALF - 12.0
+	if _train_x > EDGE + 28.0:
+		_train_x = -EDGE
 	for car: Array in _train:
 		car[0].position = Vector3(_train_x + car[1], TRACK_Y + absf(sin((_train_x + car[1]) * 6.0)) * 0.015, TRACK_Z)
 	for lamp in _lamps:
 		lamp.shadow_enabled = absf(lamp.position.x - _cam_x) < _shadow_reach
 	for cloud in _clouds:
 		cloud.position.x += delta * 0.25 * cloud.scale.x
-		if cloud.position.x > 84.0:
-			cloud.position.x = -84.0
+		if cloud.position.x > EDGE - 2.0:
+			cloud.position.x = -EDGE + 2.0
 
 
 func _shader(path: String) -> ShaderMaterial:
@@ -379,6 +414,8 @@ func _ridge(art_name: String, z: float, height: float, copy: int) -> void:
 	if copy != 0:
 		ridge.mat.set_shader_parameter("mirror", 1.0)
 	ridge.set_border(1.0)
+	ridge.mat.set_shader_parameter("world_clip", EDGE)
+	_ridges.append([ridge, ridge.position.x, PARALLAX[art_name]])
 	ridge.set_tint(Color(0.62, 0.62, 0.72))
 	ridge.mat.set_shader_parameter("paper", Cutout.PLYWOOD)
 	add_child(ridge)
