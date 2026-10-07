@@ -4,7 +4,7 @@ extends Node3D
 ## Blender by tools/blender/figures.py and live in models/ as .glb files. They are real 3D models
 ## standing among the flat plywood scenery, shiny under the lamps.
 
-## Limb pivots by name ("arm_l", "leg_r", ...), for the ones that swing.
+## Joint pivots by name ("arm_l", "leg_r", and "knee_l", "elbow_r" on models that have them).
 var limbs := {}
 ## The model itself, under this node: turn it to tumble the figure about its middle.
 var body: Node3D
@@ -53,8 +53,17 @@ func stride(phase: float, amount := 0.5) -> void:
 			limbs["arm_" + side].rotation.x = -swing * 0.6
 
 
+## Makes the lamps on the figure (anything that glows) flicker out of step, like fairground bulbs.
+func twinkle(time: float) -> void:
+	if _flash > 0.0:
+		return
+	for i in _mats.size():
+		if _made[i].glows:
+			_mats[i].emission_energy_multiplier = float(_made[i].energy) * (0.45 + 0.75 * absf(sin(time * 5.0 + i * 1.9)))
+
+
 func _adopt(node: Node, copies: Dictionary) -> void:
-	if node.name.begins_with("arm_") or node.name.begins_with("leg_"):
+	if String(node.name).get_slice("_", 0) in ["arm", "leg", "knee", "elbow"]:
 		limbs[String(node.name)] = node
 	var piece := node as MeshInstance3D
 	if piece != null:

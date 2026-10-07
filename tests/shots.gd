@@ -37,6 +37,15 @@ func _run() -> void:
 	_tough()
 	await _wait(5.0)
 	await _snap("2_wave1")
+	main.player.goal_x = 9.0
+	await _wait(0.45)
+	await _snap("2_run")
+	main.levels = {"jump": 1, "dash": 1}
+	main.player.apply(main.levels)
+	main.player.jump()
+	await _wait(0.3)
+	await _snap("2_jump")
+	await _wait(1.0)
 	for x: float in [-37.7, 56.6]:
 		main.player.x = x
 		main.player.goal_x = x
@@ -80,3 +89,9 @@ func _run() -> void:
 func _tough() -> void:
 	for a in main.swarm.aliens:
 		a.hp = 99999.0
+
+
+func _process(_delta: float) -> bool:
+	if main != null and is_instance_valid(main):
+		_tough()
+	return false

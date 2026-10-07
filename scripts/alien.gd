@@ -88,6 +88,7 @@ func animate(delta: float) -> void:
 	position = Vector3(pos.x, pos.y, 0.0)
 	# Limbs dangle and swing as it is jerked along its line
 	stride(pos.x * 2.5 + phase, 0.28)
+	twinkle(Time.get_ticks_msec() * 0.001 + phase)
 
 
 func _add_beam() -> void:

@@ -1,8 +1,9 @@
 # Denver Vs The Universe
 
-A roguelike take on Space Invaders, staged as a diorama on a big table under hanging lamps. A few large alien
-action figures descend on Denver at a time; you run a giant F-15 robot along the street through Cherry Creek,
-downtown and RiNo and, between waves, pick one of three cards: robot upgrades or city defenses.
+A roguelike take on Space Invaders, staged as a home-made diorama on a long table under hanging lamps. A few
+large alien action figures descend on Denver at a time; you run a toy F-15 robot along a street cut through the
+plywood city and, between waves, pick one of three cards: city defenses, robot upgrades or new abilities.
+`DESIGN.md` says what the game is meant to be and look like.
 The run ends when the robot runs out of hearts or half the city's health is gone.
 
 Godot 4.7, GL Compatibility, built for the web (the Scareathon arcade) and phones. Everything is made in code:

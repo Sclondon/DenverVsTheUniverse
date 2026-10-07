@@ -6,9 +6,9 @@ extends Node3D
 
 const FOV := 30.0
 ## The play box the camera must always show, in world units (the fight happens on the z = 0 plane).
-const BOX_W := 17.6
-const BOX_H := 15.2
-const BOTTOM := -1.3
+const BOX_W := 19.5
+const BOX_H := 17.0
+const BOTTOM := -3.6
 ## The camera looks down on the table from above and a little to the right, like someone leaning over it.
 const PITCH := 0.38
 const YAW := 0.12
@@ -26,6 +26,10 @@ const TRACK_Y := 2.1
 const TRAIN_SPEED := 2.6
 ## How far the camera turns to look the way the robot is running.
 const SWIVEL := 0.11
+## The front edge of the table, the spacing of the marquee bulbs along it, and how long a searchlight beam is.
+const TABLE_FRONT := 6.25
+const BULB_GAP := 1.1
+const BEAM_LENGTH := 22.0
 
 var font: Font
 var camera: Camera3D
@@ -43,6 +47,11 @@ var _lens: ShaderMaterial
 var _train: Array = []
 var _train_x := -30.0
 var _swivel := 0.0
+## 1 while the camera should show off (the title screen): it drifts in a wider arc. 0 in play.
+var drama := 0.0
+var _drama := 1.0
+var _time := 0.0
+var _beams: Array[Node3D] = []
 var _rng := RandomNumberGenerator.new()
 
 
@@ -86,19 +95,28 @@ func _ready() -> void:
 		lamp.look_at(Vector3(x, 3.0, -5.0))
 		_lamps.append(lamp)
 
+	# A faint fill from the front of the room, so nothing above the lamps is lost in the dark
+	var fill := DirectionalLight3D.new()
+	fill.light_energy = 0.28
+	fill.light_color = Color(0.8, 0.75, 1.0)
+	fill.rotation = Vector3(-0.5, 0.2, 0.0)
+	add_child(fill)
+
 	var board := MeshInstance3D.new()
 	var board_quad := QuadMesh.new()
-	board_quad.size = Vector2(250.0, 25.0)
+	board_quad.size = Vector2(250.0, 50.0)
 	board.mesh = board_quad
 	var paint := _shader("res://shaders/sky.gdshader")
-	paint.set_shader_parameter("cells", Vector2(500.0, 50.0))
+	paint.set_shader_parameter("cells", Vector2(500.0, 100.0))
+	paint.set_shader_parameter("horizon", 0.04)
+	paint.set_shader_parameter("height", 0.5)
 	board.material_override = paint
-	board.position = Vector3(0.0, 12.5, -17.0)
+	board.position = Vector3(0.0, 25.0, -17.0)
 	add_child(board)
 
 	var table := MeshInstance3D.new()
 	var box := BoxMesh.new()
-	box.size = Vector3(250.0, 1.4, 38.0)
+	box.size = Vector3(250.0, 2.6, 28.5)
 	table.mesh = box
 	var ground := _shader("res://shaders/ground.gdshader")
 	for tex: String in ["planks_c", "planks_n", "planks_r", "grass_c", "grass_n", "asphalt_c", "asphalt_n"]:
@@ -107,7 +125,7 @@ func _ready() -> void:
 	ground.set_shader_parameter("mat_half", Vector2(City.HALF + 2.5, 0.0))
 	ground.set_shader_parameter("parks", Vector2(DISTRICTS[PARKS[0]], DISTRICTS[PARKS[1]]))
 	table.material_override = ground
-	table.position = Vector3(0.0, -0.7, -3.0)
+	table.position = Vector3(0.0, -1.3, -8.0)
 	add_child(table)
 
 	# The range repeats along the back, mirrored each time so the joins match up
@@ -140,7 +158,7 @@ func _ready() -> void:
 	# The parks: plywood trees scattered round the lake, a few this side of the street
 	for park: int in PARKS:
 		for i in 34:
-			var at := Vector3(_rng.randf_range(-9.0, 9.0), 0.0, _rng.randf_range(-9.0, -1.6) if i < 26 else _rng.randf_range(2.2, 6.4))
+			var at := Vector3(_rng.randf_range(-9.0, 9.0), 0.0, _rng.randf_range(-9.0, -1.6) if i < 26 else _rng.randf_range(2.2, 4.8))
 			# Not in the water
 			if Vector2(at.x / 6.4, (at.z + 6.4) / 3.0).length() < 1.0:
 				continue
@@ -175,10 +193,57 @@ func _ready() -> void:
 		_train.append([car, along])
 		along -= car.size.x * 0.5 - Cutout.PAD / City.PPU + 0.06
 
+	# The marquee: carnival bulbs chasing along the front of the table
+	var bulb := SphereMesh.new()
+	bulb.radius = 0.16
+	bulb.height = 0.32
+	bulb.radial_segments = 10
+	bulb.rings = 5
+	bulb.material = _shader("res://shaders/marquee.gdshader")
+	var row := MultiMesh.new()
+	row.transform_format = MultiMesh.TRANSFORM_3D
+	row.mesh = bulb
+	row.instance_count = int((2.0 * City.HALF + 16.0) / BULB_GAP) * 2
+	for i in row.instance_count:
+		var bulb_x := -City.HALF - 8.0 + (i / 2) * BULB_GAP
+		# Two strings: along the lip of the table and along its front board
+		row.set_instance_transform(i, Transform3D(Basis.IDENTITY, Vector3(bulb_x + (i % 2) * BULB_GAP * 0.5, 0.12 if i % 2 == 0 else -1.2, TABLE_FRONT + (-0.2 if i % 2 == 0 else 0.08))))
+	var marquee := MultiMeshInstance3D.new()
+	marquee.multimesh = row
+	marquee.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(marquee)
+
+	# Searchlights behind each neighbourhood, raking the sky for saucers
+	var cone := CylinderMesh.new()
+	cone.top_radius = 1.5
+	cone.bottom_radius = 0.06
+	cone.height = BEAM_LENGTH
+	cone.radial_segments = 12
+	cone.cap_top = false
+	cone.cap_bottom = false
+	for i in TOWNS.size() * 2:
+		var ray := StandardMaterial3D.new()
+		ray.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		ray.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		ray.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		ray.cull_mode = BaseMaterial3D.CULL_DISABLED
+		ray.albedo_color = Color([Color("ff3d7f"), Color("4fe3ff"), Color("ffd23f"), Color("9be33a")][i % 4], 0.07)
+		var beam := MeshInstance3D.new()
+		beam.mesh = cone
+		beam.material_override = ray
+		beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		# The cone hangs from a pivot at its point, so turning the pivot sweeps the beam
+		var lamp := Node3D.new()
+		lamp.position = Vector3(TOWNS[i / 2] + (-5.5 if i % 2 == 0 else 5.5), 0.3, -9.6)
+		beam.position.y = BEAM_LENGTH * 0.5
+		lamp.add_child(beam)
+		add_child(lamp)
+		_beams.append(lamp)
+
 	# Hand-painted signs: the neighbourhoods, and the roadside-attraction kind
 	var signs: Array = [[-67.0, 1.0, "ALIEN\nXING", 0.06], [67.0, 1.0, "UFO\nPARKING", -0.05]]
 	for i in DISTRICTS.size():
-		signs.append([DISTRICTS[i] - (8.8 if i == 3 else 0.0), 7.0, NAMES[i], 0.05 if i % 2 == 0 else -0.04])
+		signs.append([DISTRICTS[i] - (8.8 if i == 3 else 0.0), 5.3, NAMES[i], 0.05 if i % 2 == 0 else -0.04])
 	for s: Array in signs:
 		var post := Cutout.make("sign", Cutout.PPU * 1.15, true)
 		post.position = Vector3(s[0], 0.0, s[1])
@@ -238,8 +303,15 @@ func update_camera(delta: float, focus_x: float, heading := 0.0) -> void:
 	var target := Vector3(_cam_x, centre, 0.0)
 	# The camera swings a little toward the way the robot is heading (`heading`, -1 to 1)
 	_swivel = lerpf(_swivel, clampf(heading, -1.0, 1.0) * SWIVEL, 1.0 - exp(-2.5 * delta))
-	camera.position = target + Vector3(sin(YAW - _swivel) * cos(PITCH), sin(PITCH), cos(YAW - _swivel) * cos(PITCH)) * dist + jolt
+	# It never sits still: a slow drift round the table and up and down, like a crane shot
+	_time += delta
+	_drama = lerpf(_drama, drama, 1.0 - exp(-1.5 * delta))
+	var yaw := YAW - _swivel + sin(_time * 0.23) * (0.09 + 0.26 * _drama)
+	var pitch := PITCH + sin(_time * 0.17 + 1.0) * 0.03 - 0.08 * _drama
+	camera.position = target + Vector3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch)) * dist * (1.0 - 0.08 * _drama) + jolt
 	camera.look_at(target + jolt + Vector3(_swivel * 14.0, 0.0, 0.0))
+	for i in _beams.size():
+		_beams[i].rotation = Vector3(-0.25 + sin(_time * 0.31 + i * 2.1) * 0.2, 0.0, sin(_time * 0.47 + i * 1.7) * 0.6)
 	_train_x += TRAIN_SPEED * delta
 	if _train_x > City.HALF + 40.0:
 		_train_x = -City.HALF - 12.0

@@ -1,5 +1,6 @@
 shader_type spatial;
 render_mode cull_disabled, specular_disabled;
+#include "res://shaders/splat.gdshaderinc"
 // A flat cut-out standing on the table, lit by the lamps overhead: art with an edge of bare
 // material (plywood, card) around its silhouette. `cut` tears the top off (buildings crumble from
 // the roof down) and scorches the torn edge. `solid` paints the whole shape one colour, for the
@@ -23,9 +24,11 @@ uniform float wooden = 0.0;
 // Flips the art left to right (turning the piece itself round would turn its face from the lamps).
 uniform float mirror = 0.0;
 varying vec2 grain_uv;
+varying vec2 world_xy;
 
 void vertex() {
 	grain_uv = VERTEX.xy * 0.3;
+	world_xy = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xy + MODEL_MATRIX[3].z * 3.7;
 	if (mirror > 0.5) {
 		UV.x = 1.0 - UV.x;
 	}
@@ -60,6 +63,9 @@ void fragment() {
 		vec3 g = texture(wood, grain_uv).rgb;
 		float painted = smoothstep(0.35, 0.65, c.a) * (1.0 - bare);
 		col = mix(g * 1.5 * (1.0 - 0.3 * UV2.y), col * (0.82 + 0.5 * g.g), painted);
+		// Whoever painted it was not careful: splatter on the bare wood, the odd fleck on the art
+		vec4 paint = splatter(world_xy * 1.1, mix(0.45, 0.025, painted));
+		col = mix(col, paint.rgb * (0.85 + 0.3 * g.g), paint.a * 0.92);
 	}
 	if (cut < 0.999) {
 		float h = 1.0 - UV.y;

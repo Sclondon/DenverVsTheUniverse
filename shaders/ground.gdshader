@@ -1,4 +1,5 @@
 shader_type spatial;
+#include "res://shaders/splat.gdshaderinc"
 // The big table: real planks, with the diorama's ground laid on top of it. The ground is scenic
 // turf (dry prairie, green in the parks), a resin lake in each park, and the asphalt street the
 // robot runs along.
@@ -11,7 +12,7 @@ uniform sampler2D grass_n : hint_normal, filter_linear_mipmap_anisotropic, repea
 uniform sampler2D asphalt_c : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D asphalt_n : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform vec2 mat_half = vec2(68.5, 0.0);
-uniform vec2 mat_z = vec2(-16.6, 7.6);
+uniform vec2 mat_z = vec2(-16.6, 5.5);
 // Centres of the two parks along the table, and half their length.
 uniform vec2 parks = vec2(-37.7, 37.7);
 uniform float park_half = 9.3;
@@ -29,6 +30,9 @@ void fragment() {
 	vec3 col = texture(planks_c, uv).rgb * 0.8;
 	vec3 nm = texture(planks_n, uv).rgb;
 	float rough = texture(planks_r, uv).r * 0.8;
+	// The table has been painted on for years
+	vec4 paint = splatter(mix(vec2(wp.x, wp.y * 2.0), wp.xz, top) * 0.9, 0.42);
+	col = mix(col, paint.rgb * (0.5 + col.g * 1.6), paint.a * 0.9);
 	if (top > 0.5 && abs(wp.x) < mat_half.x && wp.z > mat_z.x && wp.z < mat_z.y) {
 		float px = min(abs(wp.x - parks.x), abs(wp.x - parks.y));
 		float park = smoothstep(park_half + 0.6, park_half - 0.6, px);

@@ -6,21 +6,22 @@ extends Figure
 const LIMIT := City.HALF - 0.5
 const BASE_HEARTS := 6
 ## The gun pod is in the right hand, held overhead: shots leave from this far right of centre.
-const GUN_X := 0.92
+const GUN_X := 0.79
 ## The model is built 3 units tall; the robot stands this much bigger.
-const SIZE := 1.4
+const SIZE := 1.2
 const DASH_SPEED := 30.0
 const DASH_TIME := 0.26
 const SPIN_TIME := 0.38
+const LAND_TIME := 0.2
 ## The point the model turns about when it flips, in its own units.
 const MIDDLE := Vector3(0.0, 1.6, 0.0)
 const GRAVITY := 30.0
 ## Per chassis (stock, Strike Eagle, awakened): extra hearts, height the shots leave from, hit box
 ## (half width, centre height, half height) and seconds for the A.T. field to recharge (0 = none).
 const CHASSIS := [
-	{"tint": "ffffff", "hearts": 0, "muzzle": 6.0, "box": Vector3(0.8, 1.9, 1.75), "field": 0.0},
-	{"tint": "9aa0b4", "hearts": 2, "muzzle": 6.0, "box": Vector3(0.8, 1.9, 1.75), "field": 12.0},
-	{"tint": "f0a0e0", "hearts": 3, "muzzle": 6.0, "box": Vector3(0.8, 1.9, 1.75), "field": 7.0},
+	{"tint": "ffffff", "hearts": 0, "muzzle": 5.25, "box": Vector3(0.7, 1.65, 1.5), "field": 0.0},
+	{"tint": "9aa0b4", "hearts": 2, "muzzle": 5.25, "box": Vector3(0.7, 1.65, 1.5), "field": 12.0},
+	{"tint": "f0a0e0", "hearts": 3, "muzzle": 5.25, "box": Vector3(0.7, 1.65, 1.5), "field": 7.0},
 ]
 
 var game
@@ -71,13 +72,33 @@ var _land := 0.0
 var _spin_t := 0.0
 var _spin_dir := 1.0
 var _was_facing := 1.0
+var _bubble: MeshInstance3D
+var _bubble_mat: ShaderMaterial
+var _power := 0.0
+var _pop := 0.0
+## How far through its run cycle it is, and where it was when that was last added up.
+var _run := 0.0
+var _ran_from := 0.0
 
 
 func _init() -> void:
 	build("robot")
+	# The force field the refits carry: a bubble that shows while it is charged
+	var ball := SphereMesh.new()
+	ball.radius = 2.25
+	ball.height = 4.5
+	_bubble_mat = ShaderMaterial.new()
+	_bubble_mat.shader = preload("res://shaders/shield.gdshader")
+	_bubble = MeshInstance3D.new()
+	_bubble.mesh = ball
+	_bubble.material_override = _bubble_mat
+	_bubble.position.y = 1.7
+	_bubble.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(_bubble)
 
 
 func reset() -> void:
+	_ran_from = 0.0
 	y = 0.0
 	_vy = 0.0
 	_dash_t = 0.0
@@ -169,6 +190,7 @@ func absorb() -> bool:
 	if recharge <= 0.0 or _field > 0.0:
 		return false
 	_field = recharge
+	_pop = 1.0
 	return true
 
 
@@ -196,7 +218,7 @@ func update(delta: float, firing: bool) -> void:
 		if y == 0.0:
 			_vy = 0.0
 			game.diorama.shake(0.25)
-			_land = 0.16
+			_land = LAND_TIME
 	_lean = lerpf(_lean, (x - before) / maxf(delta, 0.001) / speed, 1.0 - exp(-10.0 * delta))
 	invuln = maxf(0.0, invuln - delta)
 	overdrive = maxf(0.0, overdrive - delta)
@@ -225,54 +247,85 @@ func update(delta: float, firing: bool) -> void:
 		_drone_t = 0.8
 	_recoil = maxf(0.0, _recoil - delta * 6.0)
 	_acrobatics(delta)
-	position = Vector3(x, y + absf(sin(x * 3.0)) * 0.12, 0.0)
-	rotation.z = -_lean * 0.12
-	var squash := maxf(_recoil * 0.05, _land * 0.9)
+	_pop = maxf(0.0, _pop - delta * 2.5)
+	var shielded: bool = float(CHASSIS[chassis].field) > 0.0 and _field <= 0.0
+	_power = move_toward(_power, 1.0 if shielded else 0.0, delta * 3.0)
+	_bubble.visible = _power > 0.0 or _pop > 0.0
+	_bubble.scale = Vector3.ONE * (1.0 + (1.0 - _pop) * 0.25 * signf(_pop))
+	_bubble_mat.set_shader_parameter("power", _power)
+	_bubble_mat.set_shader_parameter("pop", _pop)
+	position = Vector3(x, y + absf(sin(_run)) * 0.1 * clampf(absf(_lean), 0.0, 1.0), 0.0)
+	rotation.z = 0.0
+	var squash := maxf(_recoil * 0.03, _land * 0.5)
 	scale = Vector3(1.0 + squash * 0.8, 1.0 - squash, 1.0) * SIZE
 	fade_flash(delta)
 
 
-## The robot is an acrobat: it turns its shoulders into a run, spins on its heel when it doubles
-## back, cartwheels through a dash and tucks into a flip when it leaves the ground.
+## The robot is an athlete: it turns and leans into a proper run (knees driving, free arm
+## pumping), spins on its heel when it doubles back, cartwheels through a dash and tucks into a
+## flip off the ground. Through all of it the gun arm stays on its target.
 func _acrobatics(delta: float) -> void:
-	stride(x * 3.0, 0.75)
-	limbs.arm_r.rotation.x = PI - 0.1 + _recoil * 0.12
-	_arm_aim = lerp_angle(_arm_aim, _aim, 1.0 - exp(-18.0 * delta))
-	limbs.arm_r.rotation.z = _arm_aim
-	limbs.arm_l.rotation.z = 0.0
+	var pace := clampf(absf(_lean), 0.0, 1.0)
+	_run += absf(x - _ran_from) * 2.3 / SIZE
+	_ran_from = x
 	_land = maxf(0.0, _land - delta)
-	if facing != _was_facing and absf(_lean) > 0.45 and _spin_t <= 0.0:
+	if facing != _was_facing and pace > 0.45 and _spin_t <= 0.0:
 		_spin_t = SPIN_TIME
 		_spin_dir = facing
 	_was_facing = facing
-	var yaw := _lean * 0.5
+
+	# The run cycle. Each leg swings from the hip and folds at the knee as it comes forward;
+	# the free arm pumps against its leg with the elbow bent.
+	var breath := sin(Time.get_ticks_msec() * 0.003)
+	for side: String in ["l", "r"]:
+		var phase := _run + (0.0 if side == "l" else PI)
+		limbs["leg_" + side].rotation = Vector3(sin(phase) * 0.95 * pace, 0.0, 0.0)
+		limbs["knee_" + side].rotation.x = 0.06 + pace * (0.25 + 1.15 * maxf(0.0, -cos(phase)))
+	limbs.arm_l.rotation = Vector3(-sin(_run) * 0.9 * pace + breath * 0.03, 0.0, -0.08)
+	limbs.elbow_l.rotation.x = -0.15 - 1.25 * pace
+	var yaw := _lean * 1.15
 	var roll := 0.0
 	var flip := 0.0
+	var lean := 0.24 * pace
 	if _spin_t > 0.0:
 		_spin_t -= delta
 		yaw += _spin_dir * TAU * ease(1.0 - maxf(_spin_t, 0.0) / SPIN_TIME, -2.0)
 	if _dash_t > 0.0:
+		# A cartwheel: limbs flung out like spokes
 		roll = -_dash_dir * TAU * (1.0 - _dash_t / DASH_TIME)
-		limbs.arm_l.rotation.z = -2.6
-		limbs.leg_l.rotation.x = 0.0
-		limbs.leg_r.rotation.x = 0.0
-		limbs.leg_l.rotation.z = -0.5
-		limbs.leg_r.rotation.z = 0.5
-	else:
-		limbs.leg_l.rotation.z = 0.0
-		limbs.leg_r.rotation.z = 0.0
-	if y > 0.0 and _air_len > 0.0:
+		yaw = 0.0
+		lean = 0.0
+		limbs.arm_l.rotation = Vector3(0.0, 0.0, -2.6)
+		limbs.elbow_l.rotation.x = 0.0
+		limbs.leg_l.rotation = Vector3(0.0, 0.0, -0.55)
+		limbs.leg_r.rotation = Vector3(0.0, 0.0, 0.55)
+		limbs.knee_l.rotation.x = 0.0
+		limbs.knee_r.rotation.x = 0.0
+	elif y > 0.0 and _air_len > 0.0:
 		_air_t += delta
 		var through := clampf(_air_t / _air_len, 0.0, 1.0)
 		flip = TAU * ease(through, -1.6) * _flips
-		# Knees up and the free arm out while it turns over
+		# Knees to the chest and the free arm out while it turns over
 		var tuck := sin(through * PI)
 		limbs.leg_l.rotation.x = -1.5 * tuck
 		limbs.leg_r.rotation.x = -1.2 * tuck
-		limbs.arm_l.rotation.z = -1.4 * tuck
+		limbs.knee_l.rotation.x = 1.9 * tuck
+		limbs.knee_r.rotation.x = 1.6 * tuck
+		limbs.arm_l.rotation = Vector3(-0.4 * tuck, 0.0, -1.4 * tuck)
+	elif _land > 0.0:
+		# It lands in a crouch
+		var crouch := _land / LAND_TIME
+		limbs.leg_l.rotation.x = -0.7 * crouch
+		limbs.leg_r.rotation.x = -0.7 * crouch
+		limbs.knee_l.rotation.x = 1.4 * crouch
+		limbs.knee_r.rotation.x = 1.4 * crouch
 	# Everything turns about the robot's middle, not its feet
-	var turn := Basis(Vector3.UP, yaw) * Basis(Vector3.BACK, roll) * Basis(Vector3.RIGHT, flip)
+	var turn := Basis(Vector3.UP, yaw) * Basis(Vector3.BACK, roll) * Basis(Vector3.RIGHT, flip + lean)
 	body.transform = Transform3D(turn, MIDDLE - turn * MIDDLE)
+	# The gun arm points where the gun is aimed whichever way up the robot is
+	_arm_aim = lerp_angle(_arm_aim, _aim, 1.0 - exp(-18.0 * delta))
+	var at := turn.inverse() * Vector3(sin(_arm_aim), cos(_arm_aim), 0.12 * _recoil)
+	limbs.arm_r.basis = Basis(Quaternion(Vector3.UP, at.normalized())) * Basis(Vector3.RIGHT, PI)
 
 
 ## The nearest alien within reach of the gun, or null.

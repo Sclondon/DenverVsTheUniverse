@@ -1,4 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="40" height="64" viewBox="0 0 40 64">
-<rect x="11" y="10" width="18" height="44" rx="9" fill="#ffd23f" stroke="#22223b" stroke-width="4"/>
-<rect x="17" y="16" width="6" height="22" rx="3" fill="#fff7d1"/>
+<!-- A foam dart, tip up: blue foam, orange rubber tip -->
+<rect x="12" y="20" width="16" height="36" rx="3" fill="#2a8fe8" stroke="#22223b" stroke-width="4"/>
+<rect x="15" y="26" width="4" height="24" rx="2" fill="#8fd0ff"/>
+<path d="M10,22 Q10,8 20,8 Q30,8 30,22 Z" fill="#ff7a1a" stroke="#22223b" stroke-width="4" stroke-linejoin="round"/>
 </svg>

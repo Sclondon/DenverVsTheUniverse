@@ -117,6 +117,7 @@ func _process(delta: float) -> void:
 	if state != State.TITLE:
 		hud.set_stats(score, wave, player.hearts, player.max_hearts, city.percent())
 		_point_at_threats()
+	diorama.drama = 1.0 if state == State.TITLE else 0.0
 	diorama.update_camera(delta, player.x, player.heading())
 
 

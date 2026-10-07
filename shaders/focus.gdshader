@@ -52,13 +52,16 @@ vec3 console(vec2 cell, vec2 res, float coarse, mat4 unproject) {
 void fragment() {
 	vec3 col;
 	if (lines > 0.0) {
-		vec2 res = floor(VIEWPORT_SIZE * lines / VIEWPORT_SIZE.y);
-		float coarse = log2(VIEWPORT_SIZE.y / lines);
+		// Counted along the shorter side, so a phone held upright is no coarser than a monitor
+		float shorter = min(VIEWPORT_SIZE.x, VIEWPORT_SIZE.y);
+		vec2 res = floor(VIEWPORT_SIZE * lines / shorter);
+		float coarse = log2(max(shorter / lines, 1.0));
 		vec2 p = SCREEN_UV * res - 0.5;
 		vec2 cell = floor(p);
 		vec2 f = fract(p);
-		col = mix(mix(console(cell, res, coarse, INV_PROJECTION_MATRIX), console(cell + vec2(1.0, 0.0), res, coarse, INV_PROJECTION_MATRIX), f.x),
-				mix(console(cell + vec2(0.0, 1.0), res, coarse, INV_PROJECTION_MATRIX), console(cell + vec2(1.0, 1.0), res, coarse, INV_PROJECTION_MATRIX), f.x), f.y);
+		// Smoothed across but not down, as the console did it: scan lines stay crisp
+		cell.y = floor(SCREEN_UV.y * res.y);
+		col = mix(console(cell, res, coarse, INV_PROJECTION_MATRIX), console(cell + vec2(1.0, 0.0), res, coarse, INV_PROJECTION_MATRIX), f.x);
 	} else {
 		col = shot(SCREEN_UV, 0.0, INV_PROJECTION_MATRIX);
 	}

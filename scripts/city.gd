@@ -23,6 +23,11 @@ const ART := {
 	"mid": ["qwest", "orange", "gold_a", "gold_b", "mid_a", "mid_b", "mid_c", "ribbed", "dark"],
 	"low": ["pink_low", "low_wide", "low_a", "low_b", "low_c", "low_d"],
 }
+## How big each height of building is made: towers loom, the low-rise is small.
+const SIZES := {"tall": 1.6, "mid": 1.1, "low": 0.68}
+## Nothing stands taller than this: the aliens need sky to form up in.
+const MAX_HEIGHT := 7.6
+const LANDMARK_SIZES := {"cash": 1.45, "republic": 1.5, "c1801": 1.2, "qwest": 1.3, "df": 1.15}
 ## The landmarks stand where you'd look for them: art, x, z.
 const LANDMARKS := [
 	["df", -6.9, -2.5], ["cash", -4.6, -2.5], ["republic", -1.3, -2.5], ["c1801", 2.4, -2.5], ["qwest", 5.4, -2.5],
@@ -72,8 +77,6 @@ const DEPTH := [
 	[2.8, ["low"], 0.6, "f4f4ff"],
 	[3.7, ["low"], 0.5, "ececfa"],
 	[4.6, ["low"], 0.4, "e4e4f4"],
-	[5.5, ["low"], 0.4, "dcdcee"],
-	[6.4, ["low"], 0.4, "d4d4e8"],
 ]
 
 
@@ -116,17 +119,18 @@ func _ready() -> void:
 	for row: Array in rows:
 		var x: float = row[0]
 		while x < row[1]:
-			var kinds: Array = ART[row[3][rng.randi() % row[3].size()]]
-			var b := _add(kinds[rng.randi() % kinds.size()], 0.0, row[2] + rng.randf_range(-0.12, 0.12), "", rng.randf() < 0.5)
+			var kind: String = row[3][rng.randi() % row[3].size()]
+			var kinds: Array = ART[kind]
+			var b := _add(kinds[rng.randi() % kinds.size()], 0.0, row[2] + rng.randf_range(-0.12, 0.12), "", rng.randf() < 0.5, SIZES[kind] * rng.randf_range(0.88, 1.12))
 			b.x = x + b.half_w
 			b.node.position.x = b.x
 			b.node.set_tint(Color(row[5]))
 			x += b.half_w * 2.0 + rng.randf_range(0.0, row[4])
 	for mark: Array in LANDMARKS:
-		_add(mark[0], mark[1], mark[2], mark[0], false)
+		_add(mark[0], mark[1], mark[2], mark[0], false, LANDMARK_SIZES.get(mark[0], 1.0))
 
 
-func _add(art_name: String, x: float, z: float, id: String, mirrored: bool) -> Building:
+func _add(art_name: String, x: float, z: float, id: String, mirrored: bool, size: float) -> Building:
 	var b := Building.new()
 	b.id = id
 	b.title = NAMES.get(id, "")
@@ -138,8 +142,10 @@ func _add(art_name: String, x: float, z: float, id: String, mirrored: bool) -> B
 	b.node.position = Vector3(x, 0.0, z)
 	if mirrored:
 		b.node.mat.set_shader_parameter("mirror", 1.0)
-	b.half_w = b.node.size.x * 0.5 - Cutout.PAD / PPU
-	b.height = b.node.content_height()
+	size = minf(size, MAX_HEIGHT / b.node.content_height())
+	b.node.scale = Vector3.ONE * size
+	b.half_w = (b.node.size.x * 0.5 - Cutout.PAD / PPU) * size
+	b.height = b.node.content_height() * size
 	b.max_hp = clampi(roundi(b.height * 1.4), 2, 8)
 	b.hp = b.max_hp
 	add_child(b.node)

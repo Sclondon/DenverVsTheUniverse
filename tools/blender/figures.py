@@ -175,9 +175,9 @@ def robot():
     """An F-15 that stood up: slim and long-limbed like an Evangelion. The radome is its head, the
     intakes its shoulders with the twin tails rising from them as pylons, the wings a cape down its
     back, and the engines its calves. Three units to the top of the head, feet at the origin."""
-    hull = mat("aeb8c4", 0.34, 0.1)
-    hull2 = mat("76828f", 0.36, 0.1)
-    armor = mat("43348f", 0.3, 0.1)
+    hull = mat("eef0f3", 0.3, 0.0)
+    hull2 = mat("b4bec9", 0.34, 0.0)
+    armor = mat("6a35b8", 0.3, 0.0)
     joint = mat("22252d", 0.45, 0.3)
     black = mat("08080c", 0.5)
     green = mat("86ff4a", 0.3, 0.0, 3.0)
@@ -187,6 +187,10 @@ def robot():
     white = mat("f2f2f2", 0.4)
     red = mat("e0263c", 0.4)
     steel = mat("c9cfd6", 0.25, 0.4)
+    # The blaster is a toy foam-dart gun: loud orange, yellow and blue plastic
+    nerf = mat("ff7a1a", 0.35)
+    nerf_yellow = mat("ffd21f", 0.35)
+    nerf_blue = mat("2a6fe0", 0.35)
 
     for s, sn in SIDES:
         # Leg: slim thigh, spiked knee, and the calf is an engine standing on its nozzle
@@ -195,23 +199,26 @@ def robot():
         loft("thigh", armor, [(-0.02, 0.085, 0.1, 2.6), (-0.2, 0.125, 0.15, 2.6), (-0.48, 0.105, 0.125, 2.6), (-0.7, 0.075, 0.09, 2.4)], parent=leg)
         loft("thigh_stripe", green, [(-0.3, 0.128, 0.03, 3.0), (-0.34, 0.126, 0.03, 3.0)], parent=leg, loc=(0, -0.118, 0))
         ball("knee", joint, 0.09, parent=leg, loc=(0, 0.0, -0.75))
-        loft("knee_spike", hull, [(-0.06, 0.075, 0.05, 3.0), (0.06, 0.07, 0.045, 3.0), (0.34, 0.0, 0.0)], parent=leg, loc=(0, -0.1, -0.78), rot=(16, 0, 0))
-        loft("calf", hull, [(-0.8, 0.075, 0.085, 2.2), (-0.96, 0.115, 0.14, 2.6, 0, 0.02), (-1.2, 0.13, 0.16, 2.4, 0, 0.03), (-1.37, 0.14, 0.165, 2.0, 0, 0.03)], parent=leg)
-        loft("calf_band", hull2, [(-1.3, 0.142, 0.168, 2.0, 0, 0.03), (-1.37, 0.146, 0.171, 2.0, 0, 0.03)], parent=leg)
-        loft("nozzle", joint, [(-1.37, 0.135, 0.158, 2.0, 0, 0.03), (-1.5, 0.105, 0.125, 2.0, 0, 0.03), (-1.555, 0.1, 0.12, 2.0, 0, 0.03)], n=14, sharp=20, parent=leg)
-        loft("burner", burn, [(-1.4, 0.09, 0.105, 2.0, 0, 0.03), (-1.41, 0.137, 0.16, 2.0, 0, 0.03)], parent=leg)
-        loft("foot", armor, [(-0.1, 0.085, 0.05, 4.0), (0.12, 0.105, 0.065, 4.0), (0.3, 0.07, 0.045, 3.0), (0.46, 0.0, 0.0, 2.0, 0, -0.03)], parent=leg, loc=(0, -0.06, -1.495), rot=(90, 0, 0))
+        # The knee bends: everything below it hangs from knee_l / knee_r (the shin pivot keeps leg coordinates)
+        shin = pivot("shin", (0, 0, 0.75), parent=pivot("knee_" + sn, (0, 0, -0.75), parent=leg))
+        loft("knee_spike", hull, [(-0.06, 0.075, 0.05, 3.0), (0.06, 0.07, 0.045, 3.0), (0.34, 0.0, 0.0)], parent=shin, loc=(0, -0.1, -0.78), rot=(16, 0, 0))
+        loft("calf", hull, [(-0.8, 0.075, 0.085, 2.2), (-0.96, 0.115, 0.14, 2.6, 0, 0.02), (-1.2, 0.13, 0.16, 2.4, 0, 0.03), (-1.37, 0.14, 0.165, 2.0, 0, 0.03)], parent=shin)
+        loft("calf_band", hull2, [(-1.3, 0.142, 0.168, 2.0, 0, 0.03), (-1.37, 0.146, 0.171, 2.0, 0, 0.03)], parent=shin)
+        loft("nozzle", joint, [(-1.37, 0.135, 0.158, 2.0, 0, 0.03), (-1.5, 0.105, 0.125, 2.0, 0, 0.03), (-1.555, 0.1, 0.12, 2.0, 0, 0.03)], n=14, sharp=20, parent=shin)
+        loft("burner", burn, [(-1.4, 0.09, 0.105, 2.0, 0, 0.03), (-1.41, 0.137, 0.16, 2.0, 0, 0.03)], parent=shin)
+        loft("foot", armor, [(-0.1, 0.085, 0.05, 4.0), (0.12, 0.105, 0.065, 4.0), (0.3, 0.07, 0.045, 3.0), (0.46, 0.0, 0.0, 2.0, 0, -0.03)], parent=shin, loc=(0, -0.06, -1.495), rot=(90, 0, 0))
 
         # Arm: long, hanging nearly to the knee, a missile down the forearm
         arm = pivot("arm_" + sn, (s * 0.66, 0.0, 2.44))
         ball("shoulder", joint, 0.115, parent=arm)
         loft("upper_arm", armor, [(-0.03, 0.075, 0.085, 2.6), (-0.24, 0.092, 0.1, 2.6), (-0.6, 0.066, 0.072, 2.4)], parent=arm)
         ball("elbow", joint, 0.074, parent=arm, loc=(0, 0, -0.66))
-        loft("forearm", hull, [(-0.7, 0.064, 0.07, 2.4), (-0.92, 0.098, 0.108, 3.0), (-1.24, 0.082, 0.09, 3.0), (-1.32, 0.058, 0.064, 2.4)], parent=arm)
-        loft("cuff", green, [(-1.2, 0.086, 0.094, 3.0), (-1.235, 0.085, 0.093, 3.0)], parent=arm)
-        loft("hand", joint, [(-1.32, 0.048, 0.056, 3.0), (-1.42, 0.062, 0.074, 3.0), (-1.53, 0.036, 0.05, 3.0)], parent=arm)
-        loft("missile", white, [(-0.8, 0.0, 0.0), (-0.82, 0.027, 0.027), (-1.28, 0.027, 0.027)], n=10, parent=arm, loc=(s * 0.128, 0, 0))
-        loft("missile_tip", red, [(-1.28, 0.027, 0.027), (-1.4, 0.0, 0.0)], n=10, parent=arm, loc=(s * 0.128, 0, 0))
+        fore = pivot("fore_" + sn, (0, 0, 0.66), parent=pivot("elbow_" + sn, (0, 0, -0.66), parent=arm))
+        loft("forearm", hull, [(-0.7, 0.064, 0.07, 2.4), (-0.92, 0.098, 0.108, 3.0), (-1.24, 0.082, 0.09, 3.0), (-1.32, 0.058, 0.064, 2.4)], parent=fore)
+        loft("cuff", green, [(-1.2, 0.086, 0.094, 3.0), (-1.235, 0.085, 0.093, 3.0)], parent=fore)
+        loft("hand", joint, [(-1.32, 0.048, 0.056, 3.0), (-1.42, 0.062, 0.074, 3.0), (-1.53, 0.036, 0.05, 3.0)], parent=fore)
+        loft("missile", white, [(-0.8, 0.0, 0.0), (-0.82, 0.027, 0.027), (-1.28, 0.027, 0.027)], n=10, parent=fore, loc=(s * 0.128, 0, 0))
+        loft("missile_tip", red, [(-1.28, 0.027, 0.027), (-1.4, 0.0, 0.0)], n=10, parent=fore, loc=(s * 0.128, 0, 0))
 
         # Shoulder: the jet's intake, raked lip forward, with a tail fin rising from it
         loft("intake", hull, [(-0.24, 0.13, 0.13, 6.0), (0.0, 0.15, 0.16, 6.0), (0.25, 0.15, 0.17, 6.0, 0, 0.01)], loc=(s * 0.64, 0.0, 2.6), rot=(98, 0, 0))
@@ -251,14 +258,14 @@ def robot():
         loft("eye", green, [(0.06, 0.012, 0.022, 3.0), (0.2, 0.012, 0.013, 3.0)], parent=head, loc=(s * 0.108, 0.035, 0), rot=(0, s * -14.0, 0))
     loft("horn", hull, [(0.0, 0.03, 0.07, 2.0), (0.5, 0.0, 0.0, 2.0, 0, -0.1)], n=8, loc=(0, -0.16, 3.0))
 
-    # The gun pod, a rotary cannon as long as the arm, held in the right hand
-    gun = pivot("gun", (0.0, -0.085, 0.0), parent=bpy.data.objects["arm_r"])
-    loft("gun_body", joint, [(-1.14, 0.03, 0.04, 4.0), (-1.2, 0.045, 0.07, 4.0), (-1.62, 0.045, 0.065, 4.0), (-1.68, 0.03, 0.04, 4.0)], parent=gun)
-    loft("gun_drum", hull2, [(-1.3, 0.075, 0.075), (-1.5, 0.075, 0.075)], n=14, parent=gun, loc=(0, 0.02, 0))
+    # The blaster, a rotary foam-dart gun as long as the arm, held in the right hand
+    gun = pivot("gun", (0.0, -0.085, 0.0), parent=bpy.data.objects["fore_r"])
+    loft("gun_body", nerf, [(-1.14, 0.03, 0.04, 4.0), (-1.2, 0.045, 0.07, 4.0), (-1.62, 0.045, 0.065, 4.0), (-1.68, 0.03, 0.04, 4.0)], parent=gun)
+    loft("gun_drum", nerf_yellow, [(-1.28, 0.095, 0.095), (-1.52, 0.095, 0.095)], n=14, parent=gun, loc=(0, 0.02, 0))
     for i in range(3):
         a = math.radians(i * 120.0 + 90.0)
-        loft("barrel", steel, [(-1.66, 0.014, 0.014), (-1.98, 0.014, 0.014)], n=8, parent=gun, loc=(math.cos(a) * 0.022, math.sin(a) * 0.022, 0))
-    loft("muzzle", joint, [(-1.9, 0.045, 0.045), (-1.95, 0.045, 0.045)], n=14, parent=gun)
+        loft("barrel", nerf_blue, [(-1.66, 0.022, 0.022), (-1.98, 0.022, 0.022)], n=8, parent=gun, loc=(math.cos(a) * 0.022, math.sin(a) * 0.022, 0))
+    loft("muzzle", nerf, [(-1.88, 0.058, 0.058), (-1.97, 0.062, 0.062)], n=14, parent=gun)
     return 3.9, 1.85
 
 
