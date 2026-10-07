@@ -36,7 +36,7 @@ const LIST := [
 	{"id": "rockets", "name": "Shoulder Rockets", "kind": "tank", "max": 3, "icon": "missile", "desc": [
 		"Every few seconds the robot looses a homing rocket at the toughest alien.",
 		"Rockets reload faster.", "Rockets reload faster still."]},
-	{"id": "drone", "name": "Wingman Drone", "kind": "tank", "max": 2, "icon": "drone", "desc": [
+	{"id": "drone", "name": "Gun Drone", "kind": "tank", "max": 2, "icon": "drone", "desc": [
 		"A drone flies at your shoulder and fires alongside you.", "A second drone on the other shoulder."]},
 	{"id": "rapid", "name": "Rapid Fire", "kind": "tank", "max": 5, "icon": "i_rapid", "desc": [
 		"The robot fires 25% faster.", "Faster again.", "Faster again.", "Faster again.", "As fast as it gets."]},

@@ -60,6 +60,7 @@ New SVGs need `mipmaps/generate=true` in their `.import` file.
 ```
 godot --headless --path . -s tests/smoke.gd -- --runs=4     # autopilot plays whole runs, fast-forwarded
 godot --path . -s tests/shots.gd -- --shots=<dir> [--portrait]   # screenshots of each screen
+godot --headless --path . -s tests/roads.gd                   # walks the street graph the way the joystick does
 ```
 
 ## Web build

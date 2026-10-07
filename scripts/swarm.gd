@@ -16,8 +16,6 @@ const TUNED_TOP := 12.4
 const RAY_CHARGE := 1.2
 const RAY_FIRE := 0.6
 
-## The wave on which each kind first shows up.
-const DEBUTS := {2: "crab", 3: "diver", 4: "spitter", 6: "splitter", 8: "brute"}
 ## The five invasions, five waves each (the last goes on for ever): who comes, in what order they
 ## join in, what colour their plastic is and which kaiju they drop.
 const INVASIONS := [
@@ -260,7 +258,7 @@ func _kaiju(a: Alien, delta: float) -> void:
 	if player.z > -2.5 and player.y < 2.0 and absf(player.x - a.pos.x) < a.hx:
 		game.hurt_player()
 	for w: Tank in game.wingmen:
-		if not w.down and absf(w.x - a.pos.x) < a.hx:
+		if not w.down and not w.benched and absf(w.x - a.pos.x) < a.hx:
 			game.hurt_wingman(w)
 
 

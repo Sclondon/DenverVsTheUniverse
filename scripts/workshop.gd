@@ -5,7 +5,7 @@ extends RefCounted
 
 ## Over-the-counter repairs.
 const SHOP := [
-	{"id": "patch", "name": "PATCH UP THE TOWN", "cost": 40, "does": "mend every building"},
+	{"id": "patch", "name": "PATCH UP THE TOWN", "cost": 40, "does": "mend standing buildings"},
 	{"id": "heart", "name": "SPARE HEART", "cost": 30, "does": "mend one heart"},
 	{"id": "rebuild", "name": "REBUILD A WINGMAN", "cost": 90, "does": "one wingman returns"},
 ]

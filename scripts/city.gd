@@ -327,6 +327,14 @@ func repair(amount: int) -> int:
 	return used
 
 
+## True if any standing building is damaged: that is, if repair_each would do anything.
+func mendable() -> bool:
+	for b in buildings:
+		if b.alive() and b.hp < b.max_hp:
+			return true
+	return false
+
+
 ## Adds `amount` floors to every damaged building that is still standing.
 func repair_each(amount: int) -> void:
 	for b in buildings:

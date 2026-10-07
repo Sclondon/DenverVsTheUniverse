@@ -34,6 +34,8 @@ var goal_z := 0.0
 var ai := false
 var post := 1.0
 var down := false
+## True while wingmen are switched off in the options.
+var benched := false
 ## Where the driver is steering to; the tank chases it at `speed`.
 var goal_x := 0.0
 var chassis := 0
@@ -90,9 +92,8 @@ var _ring: MeshInstance3D
 var _bubble_mat: ShaderMaterial
 var _power := 0.0
 var _pop := 0.0
-## How far through its run cycle it is, and where it was when that was last added up.
+## How far through its run cycle it is.
 var _run := 0.0
-var _ran_from := 0.0
 
 
 func _init() -> void:
@@ -129,7 +130,6 @@ func _init() -> void:
 
 
 func reset() -> void:
-	_ran_from = 0.0
 	y = 0.0
 	_vy = 0.0
 	_dash_t = 0.0
@@ -185,7 +185,7 @@ func dash(dir: float) -> void:
 	goal_x = ahead.x
 	goal_z = ahead.y
 	_dash_t = DASH_TIME
-	_dash_cool = 1.6 if dash_level == 1 else 0.8
+	_dash_cool = [1.6, 1.6, 0.8, 0.5][mini(dash_level, 3)]
 	invuln = maxf(invuln, DASH_TIME + 0.1)
 	Sfx.play("missile", 1.7, -8.0)
 
@@ -204,26 +204,17 @@ func _take_off(flips: float) -> void:
 	_flips = flips
 
 
-func dash_ready() -> bool:
-	return _dash_cool <= 0.0
+func dashing() -> bool:
+	return _dash_t > 0.0
 
 
 ## A leap on the engines. Needs the Vertical Takeoff card.
 func jump() -> void:
 	if jump_level == 0 or y > 0.0:
 		return
-	_vy = 13.0 if jump_level == 1 else 15.5
+	_vy = [13.0, 13.0, 15.5, 17.5][mini(jump_level, 3)]
 	_take_off(1.0 if jump_level == 1 else 2.0)
 	Sfx.play("missile", 0.8, -8.0)
-
-
-## The way it last ran along the streets, and whether it is running now.
-func heading_dir() -> Vector2:
-	return _dir
-
-
-func moving() -> bool:
-	return absf(_lean) + absf(_lean_z) > 0.15
 
 
 ## Which way it is running and how hard: -1 (flat out left) to 1.
@@ -247,7 +238,8 @@ func absorb() -> bool:
 
 
 func update(delta: float, firing: bool) -> void:
-	if down:
+	if down or benched:
+		visible = false
 		return
 	var here := Vector2(x, z)
 	if ai:
@@ -426,7 +418,8 @@ func _think() -> void:
 	var want := lead.x + post * 7.0 if pick == null else pick.pos.x - GUN_X
 	if absf(want - lead.x) < 3.5 and lead.z > -2.0:
 		want = lead.x + post * 3.5
-	goal_x = clampf(want, -LIMIT, LIMIT)
+	# The front street stops where the ring bends away
+	goal_x = clampf(want, -Roads.SIDE + Roads.BEND, Roads.SIDE - Roads.BEND)
 	goal_z = 0.0
 
 

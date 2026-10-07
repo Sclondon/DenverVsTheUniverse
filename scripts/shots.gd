@@ -163,7 +163,7 @@ func _advance(s: Shot, delta: float) -> bool:
 		game.hurt_player()
 		return true
 	for w: Tank in game.wingmen:
-		if not w.down and w.visible and w.overlaps(s.pos, s.radius):
+		if not w.down and not w.benched and w.overlaps(s.pos, s.radius):
 			game.hurt_wingman(w)
 			return true
 	var b: City.Building = game.city.building_at(s.pos.x, s.pos.y)

@@ -121,9 +121,8 @@ static func route(from: Vector2, to: Vector2) -> Vector2:
 
 
 ## The point `reach` further along the streets from `from`, setting off the way that best matches
-## `dir` and then keeping straight on round the bends. Where a street forks, it takes the fork that
-## points along `turn` if one clearly does. Returns `from` if no street leads that way.
-static func ahead(from: Vector2, dir: Vector2, reach: float, turn := Vector2.ZERO) -> Vector2:
+## `dir` and then keeping straight on round the bends. Returns `from` if no street leads that way.
+static func ahead(from: Vector2, dir: Vector2, reach: float) -> Vector2:
 	var here := _nearest(from)
 	var at := from
 	var came := -1
@@ -154,7 +153,7 @@ static func ahead(from: Vector2, dir: Vector2, reach: float, turn := Vector2.ZER
 			return at + going * reach
 		reach -= step
 		at = points[next]
-		# Straight on, unless a fork points where the player is pushing
+		# Straight on
 		var onward := -1
 		var straight := -2.0
 		for other: int in links[next]:
@@ -162,8 +161,6 @@ static func ahead(from: Vector2, dir: Vector2, reach: float, turn := Vector2.ZER
 				continue
 			var way := (points[other] - at).normalized()
 			var score := way.dot(going)
-			if turn != Vector2.ZERO and links[next].size() > 2 and way.dot(turn) > 0.7:
-				score += 2.0
 			if score > straight:
 				straight = score
 				onward = other
@@ -181,6 +178,20 @@ static func ahead(from: Vector2, dir: Vector2, reach: float, turn := Vector2.ZER
 ## pushed, it heads for that street. Returns `from` when nothing leads that way.
 static func steer(from: Vector2, push: Vector2, reach := 3.0) -> Vector2:
 	var here := _nearest(from)
+	# A side street close by that runs the way pushed comes first, if it matches the push better
+	# than carrying on along this street would
+	var along := 0.0
+	for end: int in [here[1], here[2]]:
+		if points[end].distance_to(from) > NEAR:
+			along = maxf(along, (points[end] - from).normalized().dot(push))
+	for end: int in [here[1], here[2]]:
+		if links[end].size() > 2 and points[end].distance_to(from) < 4.0:
+			for other: int in links[end]:
+				if other == here[1] or other == here[2]:
+					continue
+				var side := (points[other] - points[end]).normalized()
+				if side.dot(push) > 0.7 and side.dot(push) > along + 0.1:
+					return points[end] + side * 2.0
 	var at := from
 	var came := -1
 	var next := -1
@@ -201,13 +212,6 @@ static func steer(from: Vector2, push: Vector2, reach := 3.0) -> Vector2:
 			next = end
 			came = here[2] if end == here[1] else here[1]
 	if next == -1:
-		# Nothing along this street: is there a side street close by that goes that way?
-		for end: int in [here[1], here[2]]:
-			if links[end].size() > 2 and points[end].distance_to(from) < 4.0:
-				for other: int in links[end]:
-					var side := (points[other] - points[end]).normalized()
-					if side.dot(push) > 0.7:
-						return points[end] + side * 2.0
 		return from
 	while reach > 0.0:
 		var step := points[next].distance_to(at)

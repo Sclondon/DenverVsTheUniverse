@@ -6,10 +6,6 @@ extends Node3D
 enum State { TITLE, PLAYING, CLEARED, PICK, SHOP, OVER }
 
 const SAVE := "user://best.cfg"
-const WAVE_NAMES := {
-	1: "First Contact", 2: "The Crab Nebula", 3: "Dive Bombers", 4: "Spit Take", 5: "The Mothership",
-	6: "Mitosis", 7: "The Heavies", 10: "The Mothership Returns",
-}
 
 var state := State.TITLE
 var wave := 0
@@ -128,8 +124,7 @@ func _process(delta: float) -> void:
 		State.PLAYING:
 			player.update(delta, true)
 			for w in wingmen:
-				if w.visible:
-					w.update(delta, true)
+				w.update(delta, true)
 			swarm.update(delta)
 			defenses.update(delta)
 			shots.update(delta)
@@ -150,13 +145,22 @@ func _process(delta: float) -> void:
 			shots.update(delta)
 			_clear_t -= delta
 			if _clear_t <= 0.0:
-				offer = Upgrades.roll(levels, rng, city.percent() < 75, wave)
+				# No wingmen left to drill: do not offer the card
+				var held := levels.duplicate()
+				if not _any_wingman():
+					held["wingman"] = 99
+				offer = Upgrades.roll(held, rng, city.percent() < 75, wave)
 				hud.show_cards(offer, levels, wave)
 				state = State.PICK
 		State.OVER:
 			_over_t += delta
 	if state != State.TITLE:
 		hud.set_stats(score, wave, player.hearts, player.max_hearts, city.percent())
+		var squad: Array = []
+		if options.wingman == 1:
+			for w in wingmen:
+				squad.append(0 if w.down else w.hearts)
+		hud.set_wingmen(squad)
 		_point_at_threats()
 	people.update(delta)
 	if state in [State.PLAYING, State.CLEARED]:
@@ -171,6 +175,7 @@ func _unhandled_input(e: InputEvent) -> void:
 		if state != State.PLAYING and state != State.CLEARED:
 			_stick_touch = -1
 			_swipe_touch = -1
+			_stick = Vector2.ZERO
 			return
 		if e.pressed:
 			# The first finger down, anywhere on the screen, is the joystick. Any finger that
@@ -202,7 +207,10 @@ func _unhandled_input(e: InputEvent) -> void:
 	elif e is InputEventScreenDrag and e.index == _swipe_touch:
 		# A swipe up is a jump, a swipe sideways a dash that way (once their cards are held)
 		var swipe: Vector2 = e.position - _swipe_from
-		if swipe.length() > SWIPE:
+		# A finger that rests, or creeps, is not swiping: the swipe starts when it moves off quickly
+		if e.velocity.length() < 250.0:
+			_swipe_from = e.position
+		elif swipe.length() > SWIPE:
 			_swipe_touch = -1
 			_flick(swipe)
 	elif e is InputEventKey and e.pressed and not e.echo:
@@ -261,7 +269,7 @@ func pick_card(index: int) -> void:
 	hud.hide_cards()
 	# Then the workshop, to spend the wreckage
 	state = State.SHOP
-	hud.show_workshop(scrap, tech)
+	hud.show_workshop(scrap, tech, _no_use())
 
 
 # --- What the other pieces report -------------------------------------------------------------
@@ -303,14 +311,19 @@ func hit_alien(a: Alien, dmg: float, _at: Vector2) -> void:
 ## An alien reached the ground: it wrecks whatever it lands on and is gone, with no points.
 func alien_crashed(a: Alien) -> void:
 	fx.burst(Vector3(a.pos.x, a.pos.y, 0.0), a.color, 12, 4.0)
+	var struck := _wingman_at(a.pos, a.hx)
 	if player.overlaps(a.pos, a.hx):
 		hurt_player()
-	elif defenses.wall_holds():
-		fx.text(Vector3(a.pos.x, 2.0, 0.5), "THE WALL HOLDS", Color("ffd23f"), 40)
+	elif struck != null:
+		hurt_wingman(struck)
 	else:
+		# The wall only spends itself on a landing that would have hit something
 		var b := city.nearest_standing(a.pos.x)
 		if b != null and absf(b.x - a.pos.x) < b.half_w + 1.6:
-			hurt_building(b, {"mite": 1, "diver": 2, "brute": 8}.get(a.kind, 4), b.roof())
+			if defenses.wall_holds():
+				fx.text(Vector3(a.pos.x, 2.0, 0.5), "THE WALL HOLDS", Color("ffd23f"), 40)
+			else:
+				hurt_building(b, {"mite": 1, "diver": 2, "brute": 8}.get(a.kind, 4), b.roof())
 	swarm.remove(a)
 
 
@@ -329,7 +342,7 @@ func hurt_player() -> void:
 	if player.absorb():
 		player.invuln = 0.6
 		fx.burst(Vector3(player.x, 2.0, 0.2), Color("ff8a2a"), 20, 5.0)
-		fx.text(Vector3(player.x, 3.6, 0.5), "A.T. FIELD", Color("ff8a2a"), 44)
+		fx.text(Vector3(player.x, 3.6, 0.5), "FORCE FIELD", Color("ff8a2a"), 44)
 		Sfx.play("dome", 0.7)
 		return
 	player.hearts -= 1
@@ -400,6 +413,9 @@ func boss_ray(x: float, y: float) -> void:
 		return
 	if absf(player.x - x) < 1.25:
 		hurt_player()
+	for w in wingmen:
+		if absf(w.x - x) < 1.25:
+			hurt_wingman(w)
 	var b := city.column_at(x)
 	if b != null:
 		hurt_building(b, 2, b.roof())
@@ -413,6 +429,8 @@ func _buy_shop(id: String) -> void:
 		return
 	match id:
 		"patch":
+			if not city.mendable():
+				return
 			city.repair_each(2)
 		"heart":
 			if player.hearts >= player.max_hearts:
@@ -427,12 +445,13 @@ func _buy_shop(id: String) -> void:
 				return
 			lost.down = false
 			lost.hearts = lost.max_hearts
-			lost.x = player.x + 5.0 * lost.post
+			lost.x = clampf(player.x + 5.0 * lost.post, -Roads.SIDE + Roads.BEND, Roads.SIDE - Roads.BEND)
+			lost.z = 0.0
 			lost.goal_x = lost.x
-			lost.visible = options.wingman == 1
+			lost.visible = true
 	scrap -= int(item.cost)
 	Sfx.play("repair")
-	hud.show_workshop(scrap, tech)
+	hud.show_workshop(scrap, tech, _no_use())
 
 
 func _buy_tech(id: String) -> void:
@@ -440,16 +459,39 @@ func _buy_tech(id: String) -> void:
 	var before := Workshop.needs(id)
 	if state != State.SHOP or item.is_empty() or tech.has(id) or scrap < int(item.cost) or (before != "" and not tech.has(before)):
 		return
+	if item.gives == "wingman" and not _any_wingman():
+		return
 	scrap -= int(item.cost)
 	tech[id] = true
-	levels[item.gives] = int(levels.get(item.gives, 0)) + 1
+	# A refit beyond the last chassis would be wasted: it becomes plating instead
+	var gives: String = item.gives
+	if gives == "mech" and int(levels.get("mech", 0)) >= Tank.CHASSIS.size() - 1:
+		gives = "armor"
+	levels[gives] = int(levels.get(gives, 0)) + 1
 	player.apply(levels)
 	for w in wingmen:
 		w.enlist(int(levels.get("wingman", 0)))
-	if item.gives in ["armor", "mech"]:
+	if gives in ["armor", "mech"]:
 		player.hearts = player.max_hearts
 	Sfx.play("pick")
-	hud.show_workshop(scrap, tech)
+	hud.show_workshop(scrap, tech, _no_use())
+
+
+## What in the workshop would do nothing if bought now.
+func _no_use() -> Array:
+	var none: Array = []
+	if not city.mendable():
+		none.append("patch")
+	if player.hearts >= player.max_hearts:
+		none.append("heart")
+	var lost := false
+	for w in wingmen:
+		lost = lost or (w.down and not w.benched)
+	if not lost:
+		none.append("rebuild")
+	if not _any_wingman():
+		none.append("hive")
+	return none
 
 
 func _leave_shop() -> void:
@@ -462,6 +504,7 @@ func _leave_shop() -> void:
 # --- Flow ------------------------------------------------------------------------------------
 
 func _next_wave() -> void:
+	_stick = Vector2.ZERO
 	wave += 1
 	swarm.spawn_wave(wave)
 	defenses.wave_start()
@@ -471,7 +514,7 @@ func _next_wave() -> void:
 	if (wave - 1) % 5 == 0:
 		hud.banner(Swarm.invasion(wave).name, "Wave %d" % wave, 2.4)
 	else:
-		hud.banner("WAVE %d" % wave, WAVE_NAMES.get(wave, "The Mothership" if boss else ""))
+		hud.banner("WAVE %d" % wave, "The Mothership" if boss else Swarm.invasion(wave).name.capitalize())
 	Sfx.play("alarm" if boss else "wave")
 
 
@@ -525,7 +568,8 @@ func _apply_options() -> void:
 	Sfx.muted = options.sound == 0
 	diorama.configure(options.picture, options.retro == 1, false)
 	for w in wingmen:
-		w.visible = options.wingman == 1 and not w.down
+		w.benched = options.wingman == 0
+		w.visible = not w.benched and not w.down
 
 
 ## A swipe: up is a jump, sideways a dash that way (once their cards are held).
@@ -542,16 +586,33 @@ func _muster() -> void:
 	for w in wingmen:
 		w.reset()
 		w.down = false
-		w.visible = options.wingman == 1
+		w.benched = options.wingman == 0
+		w.visible = not w.benched
 		w.x = 5.0 * w.post
 		w.goal_x = w.x
 		w.enlist(0)
 		w.hearts = w.max_hearts
 
 
+## True while at least one wingman is in the fight.
+func _any_wingman() -> bool:
+	for w in wingmen:
+		if not w.down and not w.benched:
+			return true
+	return false
+
+
+## The wingman, if any, standing where something has come down.
+func _wingman_at(at: Vector2, reach: float) -> Tank:
+	for w in wingmen:
+		if not w.down and not w.benched and w.overlaps(at, reach):
+			return w
+	return null
+
+
 ## A wingman is hit. Three hits and it is scrap until the next game (or a rebuild from the shop).
 func hurt_wingman(w: Tank) -> void:
-	if w.invuln > 0.0 or w.down or state != State.PLAYING:
+	if w.invuln > 0.0 or w.down or w.benched or state != State.PLAYING:
 		return
 	w.hearts -= 1
 	w.invuln = 1.2
@@ -584,6 +645,9 @@ func _drive() -> void:
 	if keys != Vector2.ZERO:
 		push = keys
 	var here := Vector2(player.x, player.z)
+	# A dash runs its course: steering waits for it
+	if player.dashing():
+		return
 	if push.length() < 0.3:
 		if _ref != Vector2.ZERO:
 			_ref = Vector2.ZERO
@@ -596,13 +660,6 @@ func _drive() -> void:
 	var goal := Roads.steer(here, push.normalized())
 	player.goal_x = goal.x
 	player.goal_z = goal.y
-
-
-## The x on the table under a point on the screen, at the depth `z`.
-func _world_x(screen: Vector2, z := 0.0) -> float:
-	var from := diorama.camera.project_ray_origin(screen)
-	var dir := diorama.camera.project_ray_normal(screen)
-	return from.x if absf(dir.z) < 0.0001 else from.x + dir.x * (z - from.z) / dir.z
 
 
 ## Tells the HUD how many aliens are off each side of the screen, so the player knows where to run.

@@ -51,6 +51,7 @@ var _menu: HBoxContainer
 var _options: Control
 var _option_rows: Array[Button] = []
 var _settings := {}
+var _wingmen: Label
 var _shop: Control
 var _scrap: Label
 var _shop_buttons := {}
@@ -97,6 +98,21 @@ func set_stats(score: int, wave: int, hearts: int, max_hearts: int, city: int) -
 		if i >= hearts:
 			h.modulate = Color(0.1, 0.1, 0.2, 0.55)
 		_hearts.add_child(h)
+
+
+## How the wingmen are doing, under the score: hearts left for each, or X for one destroyed. Empty hides it.
+func set_wingmen(hearts: Array) -> void:
+	if _wingmen == null:
+		_wingmen = _label("", 20, Color("ffb060"))
+		_wingmen.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		_wingmen.position = Vector2(16, 62)
+		# Beside the score bar, so the cards and the workshop draw over it
+		_bar.add_sibling(_wingmen)
+	var words := PackedStringArray()
+	for left: int in hearts:
+		words.append("X" if left <= 0 else "%d" % left)
+	_wingmen.text = "" if hearts.is_empty() else "WINGMEN  " + "  ".join(words)
+	_wingmen.visible = _bar.visible
 
 
 ## Boss health, 0 to 1; anything below zero hides the bar.
@@ -591,8 +607,9 @@ func _build_workshop() -> void:
 	left.add_child(_label("SHOP", 24))
 	for i in Workshop.SHOP.size():
 		var item: Dictionary = Workshop.SHOP[i]
-		var b := _sign("", CARDBOARD, Vector2(250, 108), 60.0 + i)
-		b.add_theme_font_size_override("font_size", 17)
+		var b := _sign("", CARDBOARD, Vector2(238, 126), 60.0 + i)
+		b.add_theme_font_size_override("font_size", 15)
+		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		b.get_child(0).material.set_shader_parameter("taped", 0.0)
 		b.pressed.connect(func() -> void: shop_bought.emit(item.id))
 		left.add_child(b)
@@ -612,8 +629,9 @@ func _build_workshop() -> void:
 	for row in 3:
 		for line in 3:
 			var item: Dictionary = Workshop.TECH[line * 3 + row]
-			var b := _sign("", Color("9fd8c8"), Vector2(156, 108), 70.0 + line * 3 + row)
-			b.add_theme_font_size_override("font_size", 15)
+			var b := _sign("", Color("9fd8c8"), Vector2(162, 126), 70.0 + line * 3 + row)
+			b.add_theme_font_size_override("font_size", 13)
+			b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			b.get_child(0).material.set_shader_parameter("taped", 0.0)
 			b.pressed.connect(func() -> void: tech_bought.emit(item.id))
 			grid.add_child(b)
@@ -624,13 +642,14 @@ func _build_workshop() -> void:
 	box.add_child(go)
 
 
-## Shows the workshop. `owned` is the tech already built (id -> true).
-func show_workshop(scrap: int, owned: Dictionary) -> void:
+## Shows the workshop. `owned` is the tech already built (id -> true); `no_use` lists the things
+## that would do nothing right now, which are greyed out.
+func show_workshop(scrap: int, owned: Dictionary, no_use: Array = []) -> void:
 	_scrap.text = "SCRAP  %d" % scrap
 	for item: Dictionary in Workshop.SHOP:
 		var b: Button = _shop_buttons[item.id]
 		b.text = "%s\n%s\n%d scrap" % [item.name, item.does, item.cost]
-		b.modulate = Color.WHITE if scrap >= int(item.cost) else Color(0.6, 0.6, 0.66)
+		b.modulate = Color.WHITE if scrap >= int(item.cost) and not no_use.has(item.id) else Color(0.6, 0.6, 0.66)
 	for item: Dictionary in Workshop.TECH:
 		var b: Button = _shop_buttons[item.id]
 		var before := Workshop.needs(item.id)
@@ -642,7 +661,7 @@ func show_workshop(scrap: int, owned: Dictionary) -> void:
 			b.modulate = Color(0.45, 0.45, 0.52)
 		else:
 			b.text = "%s\n%s\n%d scrap" % [item.name, item.does, item.cost]
-			b.modulate = Color.WHITE if scrap >= int(item.cost) else Color(0.66, 0.66, 0.72)
+			b.modulate = Color.WHITE if scrap >= int(item.cost) and not no_use.has(item.id) else Color(0.66, 0.66, 0.72)
 	_shop.visible = true
 
 
