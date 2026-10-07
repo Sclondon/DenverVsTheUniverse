@@ -15,29 +15,42 @@ const HALF := 66.0
 const LOSS := 0.5
 
 const NAMES := {
-	"cash": "Cash Register", "republic": "Republic Plaza", "c1801": "1801 California", "qwest": "Qwest Tower",
+	"cash": "Cash Register", "republic": "Republic Plaza", "c1801": "1801 California", "qwest": "555 17th Street",
+	"fourseasons": "Four Seasons", "b1144": "1144 Fifteenth", "b1999": "1999 Broadway", "b707": "707 17th Street",
 	"capitol": "State Capitol", "union": "Union Station", "df": "D&F Tower", "bear": "Convention Center",
 }
 const ART := {
-	"tall": ["cash", "republic", "c1801"],
+	"tall": ["gold_a", "gold_b", "mid_a", "mid_b", "mid_c", "ribbed", "dark"],
 	"mid": ["qwest", "orange", "gold_a", "gold_b", "mid_a", "mid_b", "mid_c", "ribbed", "dark"],
 	"low": ["pink_low", "low_wide", "low_a", "low_b", "low_c", "low_d"],
 }
 ## How big each height of building is made: towers loom, the low-rise is small.
-const SIZES := {"tall": 1.6, "mid": 1.1, "low": 0.68}
-## Nothing stands taller than this: the aliens need sky to form up in.
-const MAX_HEIGHT := 7.6
-const LANDMARK_SIZES := {"cash": 1.45, "republic": 1.5, "c1801": 1.2, "qwest": 1.3, "df": 1.15}
-## The landmarks stand where you'd look for them: art, x, z.
+const SIZES := {"tall": 1.5, "mid": 1.0, "low": 0.62}
+## The filler never stands taller than this, so the eight real towers are the skyline.
+const MAX_HEIGHT := 4.9
+## World units a foot of real building is built to: Republic Plaza (714 ft) comes out 8 units tall.
+const FOOT := 8.0 / 714.0
+## Denver's eight tallest buildings, at their true heights relative to each other (feet, from
+## Wikipedia's list of tallest buildings in Denver) and in the left-to-right order of the skyline
+## photograph in conceptart/. Four Seasons and 1144 Fifteenth were built after that photograph, so
+## where they stand is a guess. Then the low landmarks along the street. id, art, x, z, feet (0 = as drawn).
 const LANDMARKS := [
-	["df", -6.9, -2.5], ["cash", -4.6, -2.5], ["republic", -1.3, -2.5], ["c1801", 2.4, -2.5], ["qwest", 5.4, -2.5],
-	["union", -5.4, -1.2], ["capitol", 0.0, -1.2], ["bear", 5.4, -1.2],
+	["fourseasons", "fourseasons", -6.9, -3.3, 639.0],
+	["cash", "cash", -4.7, -2.6, 698.0],
+	["republic", "republic", -2.0, -3.4, 714.0],
+	["b707", "orange", -0.6, -2.5, 522.0],
+	["qwest", "qwest", 1.3, -3.2, 507.0],
+	["b1144", "b1144", 3.0, -2.5, 602.0],
+	["b1999", "b1999", 4.8, -3.4, 544.0],
+	["c1801", "c1801", 6.6, -2.7, 709.0],
+	["df", "df", -8.4, -1.9, 0.0],
+	["union", "union", -5.4, -1.2, 0.0], ["capitol", "capitol", 0.0, -1.2, 0.0], ["bear", "bear", 5.4, -1.2, 0.0],
 ]
 ## Rows of filler, back to front: from x, to x, z, heights to draw from, widest gap, tint.
 const ROWS := [
 	# Downtown
-	[-7.8, 7.8, -4.4, ["mid", "mid", "tall"], 0.1, "c6c6e6"],
-	[-7.6, 7.6, -3.4, ["mid"], 0.3, "e6e6f2"],
+	[-7.8, 7.8, -4.6, ["mid", "tall", "tall"], 0.1, "c6c6e6"],
+	[-7.6, 7.6, -1.9, ["mid", "low"], 0.4, "f0f0fa"],
 	[-7.8, 7.8, -1.8, ["low"], 0.5, "ffffff"],
 	# Cherry Creek: tidy mid-rises
 	[-65.4, -48.0, -4.0, ["mid"], 0.5, "c6cee6"],
@@ -56,8 +69,8 @@ const ROWS := [
 	[48.2, 65.0, -2.8, ["low"], 0.6, "b0f0e0"],
 	[48.0, 65.4, -1.5, ["low"], 0.8, "ffe6a0"],
 	# The parks: just the houses along their far side
-	[-46.6, -28.8, -9.4, ["low"], 0.9, "d8d8e6"],
-	[28.8, 46.6, -9.4, ["low"], 0.9, "d8d8e6"],
+	[-46.6, -28.8, -14.4, ["low"], 0.9, "d8d8e6"],
+	[28.8, 46.6, -14.4, ["low"], 0.9, "d8d8e6"],
 	# The stretches either side of downtown
 	[-10.3, -8.1, -3.2, ["low"], 0.4, "d8d8e6"],
 	[-10.3, -8.1, -1.6, ["low"], 0.8, "ffffff"],
@@ -69,14 +82,18 @@ const ROWS := [
 ## dimmer with distance; this side of it they run to the table edge, low so the robot stays in view.
 const STRETCHES := [[-65.5, -48.0], [-27.6, 27.6], [48.0, 65.5]]
 const DEPTH := [
-	[-5.5, ["mid", "low", "mid"], 0.3, "c0c0de"],
-	[-6.6, ["low", "mid"], 0.3, "b4b4d6"],
-	[-7.7, ["low", "mid", "low"], 0.4, "a8a8cc"],
-	[-8.8, ["low"], 0.4, "9c9cc2"],
+	[-5.8, ["mid", "low", "tall"], 0.3, "c0c0de"],
+	[-7.1, ["low", "mid"], 0.3, "b8b8d8"],
+	[-8.5, ["low", "mid", "low"], 0.4, "b0b0d2"],
+	[-10.0, ["low", "mid"], 0.4, "a8a8cc"],
+	[-11.6, ["low"], 0.5, "a0a0c6"],
+	[-13.3, ["low"], 0.5, "9898c0"],
+	[-15.1, ["low"], 0.6, "9090ba"],
 	[1.9, ["low"], 0.9, "ffffff"],
-	[2.8, ["low"], 0.6, "f4f4ff"],
-	[3.7, ["low"], 0.5, "ececfa"],
-	[4.6, ["low"], 0.4, "e4e4f4"],
+	[2.9, ["low"], 0.6, "f4f4ff"],
+	[4.0, ["low"], 0.5, "ececfa"],
+	[5.2, ["low"], 0.5, "e4e4f4"],
+	[6.5, ["low"], 0.4, "dcdcee"],
 ]
 
 
@@ -101,7 +118,7 @@ class Building:
 		return maxf(float(hp) / max_hp, City.RUBBLE)
 
 	func top() -> float:
-		return height * fraction()
+		return height * City.stands(fraction())
 
 	func roof() -> Vector3:
 		return Vector3(x, top(), z)
@@ -135,7 +152,7 @@ func _ready() -> void:
 			b.node.set_tint(Color(row[5]))
 			x += b.half_w * 2.0 + rng.randf_range(0.0, row[4])
 	for mark: Array in LANDMARKS:
-		_add(mark[0], mark[1], mark[2], mark[0], false, LANDMARK_SIZES.get(mark[0], 1.0))
+		_add(mark[1], mark[2], mark[3], mark[0], false, 1.0, mark[4] * FOOT)
 	_cells.resize(int(HALF * 2.0) + 8)
 	for i in _cells.size():
 		_cells[i] = []
@@ -144,7 +161,8 @@ func _ready() -> void:
 			_cells[cell].append(b)
 
 
-func _add(art_name: String, x: float, z: float, id: String, mirrored: bool, size: float) -> Building:
+## `tall`, if given, is the height to build it to, whatever its art's own size.
+func _add(art_name: String, x: float, z: float, id: String, mirrored: bool, size: float, tall := 0.0) -> Building:
 	var b := Building.new()
 	b.id = id
 	b.title = NAMES.get(id, "")
@@ -155,8 +173,8 @@ func _add(art_name: String, x: float, z: float, id: String, mirrored: bool, size
 	b.node.add_backing()
 	b.node.position = Vector3(x, 0.0, z)
 	if mirrored:
-		b.node.mat.set_shader_parameter("mirror", 1.0)
-	size = minf(size, MAX_HEIGHT / b.node.content_height())
+		b.node.mat.set_shader_parameter("flip", 1.0)
+	size = tall / b.node.content_height() if tall > 0.0 else minf(size, MAX_HEIGHT / b.node.content_height())
 	b.node.scale = Vector3.ONE * size
 	b.half_w = (b.node.size.x * 0.5 - Cutout.PAD / PPU) * size
 	b.height = b.node.content_height() * size
@@ -173,7 +191,8 @@ func _process(delta: float) -> void:
 		var want := b.fraction() if b.hp < b.max_hp else 1.0
 		if not is_equal_approx(b.shown, want):
 			b.shown = move_toward(b.shown, want, delta * 0.9)
-			b.node.set_cut(b.shown)
+			b.node.set_cut(stands(b.shown))
+			b.node.mat.set_shader_parameter("wear", 1.0 - b.shown)
 		b.node.fade_flash(delta)
 		b.node.rotation.z = lerpf(b.node.rotation.z, 0.0, 1.0 - exp(-10.0 * delta))
 		if is_equal_approx(b.shown, want) and not b.node.flashing() and absf(b.node.rotation.z) < 0.002:
@@ -182,6 +201,13 @@ func _process(delta: float) -> void:
 		else:
 			still.append(b)
 	_busy = still
+
+
+## How much of its height a building at this health still stands to. Damage shows in stages: first
+## soot and broken windows, then holes blown through it, and only below about half health does the
+## roof start coming down, until it is a stump of rubble.
+static func stands(health_left: float) -> float:
+	return clampf(health_left / 0.55, RUBBLE, 1.0)
 
 
 func _cell(x: float) -> int:

@@ -1,24 +1,26 @@
 class_name Cutout
 extends MeshInstance3D
-## A flat cut-out standing on the table: one quad of art with an edge of bare material around it
-## (shaders/cutout.gdshader). Buildings are plywood, figures are printed card.
+## A cut-out standing on the table: a flat sheet of art with a rim of bare paper, or (add_backing) a
+## thin cardboard slab cut to the outline of its art (shaders/cutout.gdshader).
 
 const PPU := 128.0
 ## Clear margin, in pixels, that every piece of art leaves around itself for the edge.
 const PAD := 10.0
 const SHADER := preload("res://shaders/cutout.gdshader")
-const PLYWOOD := Color("c79a5e")
-const WOOD := preload("res://textures/plywood_color.jpg")
-## How thick a plywood piece is, and how many layers that thickness is drawn with.
-const THICK := 0.1
-const LAYERS := 3
+const CARDBOARD := Color("c9a06a")
+const PLYWOOD := CARDBOARD
+## How thick a cardboard piece is.
+const THICK := 0.07
 
 static var _cache := {}
+static var _boards := {}
 
 var mat: ShaderMaterial
 var size := Vector2.ONE
 var ppu := PPU
 var _flash := 0.0
+var _art := ""
+var _standing := false
 
 
 ## Art by file name: "robot" is art/robot.svg, "px/cash" is the pixel cut-out art/px/cash.png.
@@ -36,6 +38,8 @@ static func make(art_name: String, pixels_per_unit := PPU, standing := false) ->
 
 ## `standing` puts the origin at the art's bottom edge instead of its centre.
 func setup(art_name: String, pixels_per_unit := PPU, standing := false) -> void:
+	_art = art_name
+	_standing = standing
 	var tex := art(art_name)
 	var px := Vector2(tex.get_size())
 	ppu = pixels_per_unit
@@ -53,40 +57,74 @@ func setup(art_name: String, pixels_per_unit := PPU, standing := false) -> void:
 	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_DOUBLE_SIDED
 
 
-## Turns the piece into painted plywood: real wood grain on its edge, and the sheet's thickness as
-## a stack of bare layers behind the painted face (all one mesh, so it is still one draw).
+## Turns the piece into cardboard: a real thin slab cut to the outline of its art, with the art on
+## the face and bare board on the edge and back. Pieces with the same art share one mesh.
 func add_backing() -> void:
-	mat.set_shader_parameter("paper", PLYWOOD)
-	mat.set_shader_parameter("wood", WOOD)
-	mat.set_shader_parameter("wooden", 1.0)
-	# Painted boards hold their colour in shadow, so the lamps shade the city without blotting it out
+	mat.set_shader_parameter("paper", CARDBOARD)
+	mat.set_shader_parameter("card", 1.0)
+	# Painted card holds its colour in shadow, so the lamps shade the city without blotting it out
 	mat.set_shader_parameter("glow", 0.3)
-	var quad: QuadMesh = mesh
-	var lo := Vector2(-size.x * 0.5, quad.center_offset.y - size.y * 0.5)
-	var hi := lo + size
+	var key := "%s|%s|%s" % [_art, ppu, _standing]
+	if not _boards.has(key):
+		_boards[key] = _cut_board()
+	mesh = _boards[key]
+
+
+## The slab for this art: its outline traced from the picture, filled in front and behind and
+## walled round the edge.
+func _cut_board() -> ArrayMesh:
+	var img := art(_art).get_image()
+	if img.is_compressed():
+		img.decompress()
+	var bits := BitMap.new()
+	bits.create_from_image_alpha(img, 0.5)
+	var px := Vector2(img.get_size())
+	# Where the top row of the picture is, in the piece's own space
+	var top := size.y - PAD / ppu if _standing else size.y * 0.5
 	var verts := PackedVector3Array()
 	var normals := PackedVector3Array()
 	var uvs := PackedVector2Array()
-	var layers := PackedVector2Array()
+	var sides := PackedVector2Array()
 	var indices := PackedInt32Array()
-	for i in LAYERS:
-		var z := -THICK * i / (LAYERS - 1)
-		for corner: Vector2 in [Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1)]:
-			verts.append(Vector3(lerpf(lo.x, hi.x, corner.x), lerpf(hi.y, lo.y, corner.y), z))
-			normals.append(Vector3.BACK)
-			uvs.append(corner)
-			layers.append(Vector2(0.0 if i == 0 else 1.0, float(i) / (LAYERS - 1)))
-		indices.append_array([i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3])
+	for poly: PackedVector2Array in bits.opaque_to_polygons(Rect2i(Vector2i.ZERO, img.get_size()), 1.5):
+		var tris := Geometry2D.triangulate_polygon(poly)
+		if tris.is_empty():
+			continue
+		var at := func(p: Vector2, depth: float) -> Vector3:
+			return Vector3((p.x / px.x - 0.5) * size.x, top - p.y / px.y * size.y, -depth)
+		# The face (UV2 0) and the back (UV2 1)
+		for layer in 2:
+			var base := verts.size()
+			for p in poly:
+				verts.append(at.call(p, THICK * layer))
+				normals.append(Vector3.BACK if layer == 0 else Vector3.FORWARD)
+				uvs.append(p / px)
+				sides.append(Vector2(layer, layer))
+			for i in tris:
+				indices.append(base + i)
+		# The cut edge, one strip per side of the outline
+		var outward := -1.0 if Geometry2D.is_polygon_clockwise(poly) else 1.0
+		for i in poly.size():
+			var a := poly[i]
+			var b := poly[(i + 1) % poly.size()]
+			var normal := Vector3(b.y - a.y, b.x - a.x, 0.0).normalized() * outward
+			var base := verts.size()
+			for corner: Array in [[a, 0.0], [b, 0.0], [b, THICK], [a, THICK]]:
+				verts.append(at.call(corner[0], corner[1]))
+				normals.append(normal)
+				uvs.append(corner[0] / px)
+				sides.append(Vector2(1.0, 1.0))
+			indices.append_array([base, base + 1, base + 2, base, base + 2, base + 3])
 	var arrays := []
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = verts
 	arrays[Mesh.ARRAY_NORMAL] = normals
 	arrays[Mesh.ARRAY_TEX_UV] = uvs
-	arrays[Mesh.ARRAY_TEX_UV2] = layers
+	arrays[Mesh.ARRAY_TEX_UV2] = sides
 	arrays[Mesh.ARRAY_INDEX] = indices
 	var board := ArrayMesh.new()
 	board.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	mesh = board
+	return board
 
 
 ## Height of the art itself, without the clear margin.

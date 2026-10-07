@@ -47,7 +47,12 @@ One long table in a dark room, a lamp over each district, the camera leaning ove
 
 - The street is the play line. The city is about ten rows deep behind it and four in front, so
   the robot runs through the city, not along its edge. Front rows are low so it stays in view.
-- Towers are much bigger than the low-rise, capped so the aliens still have sky to form up in.
+- Downtown is Denver's eight tallest buildings at their true heights relative to each other
+  (Wikipedia's list), in the left-to-right order of the reference photograph: Four Seasons, Wells
+  Fargo "Cash Register", Republic Plaza, 707 17th, 555 17th, 1144 Fifteenth, 1999 Broadway, 1801
+  California. Everything else is filler kept well below them.
+- Buildings are thin cardboard slabs cut to the outline of their art. Damage comes in stages:
+  grime, scorch marks, holes blown through, then the roof coming down to a stump.
 - Mount Blue Sky, as seen from Denver, stands along the back wall with a freight train running
   on an embankment in front of it.
 - Building art takes each real tower's outline, faces and colours from a reference photo and
@@ -95,8 +100,7 @@ style over the neighbourhoods nearest the robot; every fifth wave is a mothershi
 
 ## Controls
 
-Phones first. Hold a finger where the robot should go and it runs to the spot on the street under
-it; let go and it stops. It aims and fires by itself. Jump and Dash appear as two big cardboard
+Phones first. Tap where the robot should go and it runs there; drag and it follows the finger. It aims and fires by itself. Jump and Dash appear as two big cardboard
 buttons at the bottom right once their cards are picked. Keyboard: arrows or A/D to run, Space, Up
 or W to jump, Shift to dash.
 

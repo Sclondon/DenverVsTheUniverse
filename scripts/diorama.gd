@@ -6,8 +6,8 @@ extends Node3D
 
 const FOV := 30.0
 ## The play box the camera must always show, in world units (the fight happens on the z = 0 plane).
-const BOX_W := 19.5
-const BOX_H := 17.0
+const BOX_W := 22.0
+const BOX_H := 19.0
 const BOTTOM := -3.6
 ## The camera looks down on the table from above and a little to the right, like someone leaning over it.
 const PITCH := 0.27
@@ -16,9 +16,9 @@ const YAW := 0.0
 ## the N64 look and what keeps phones fast), how near a lamp must be to cast shadows, the shadow map
 ## size, and whether the lens blurs. Phones start on the second; a slow device drops down by itself.
 const QUALITY := [
-	{"lines": 400.0, "shadows": 28.0, "atlas": 4096, "blur": true},
-	{"lines": 300.0, "shadows": 10.0, "atlas": 2048, "blur": true},
-	{"lines": 240.0, "shadows": 0.0, "atlas": 1024, "blur": false},
+	{"lines": 720.0, "shadows": 28.0, "atlas": 4096, "blur": true},
+	{"lines": 540.0, "shadows": 10.0, "atlas": 2048, "blur": true},
+	{"lines": 400.0, "shadows": 0.0, "atlas": 1024, "blur": false},
 ]
 ## The table's districts, south to north, with a lamp over each. PARKS are open ground; the
 ## aliens go for the others (TOWNS).
@@ -27,13 +27,13 @@ const NAMES := ["CHERRY\nCREEK", "WASH\nPARK", "CAP\nHILL", "DOWN\nTOWN", "LODO"
 const PARKS := [1, 5]
 const TOWNS := [-56.6, -18.9, 0.0, 18.9, 56.6]
 ## The railway embankment along the back wall: where it is and how high the train rides.
-const TRACK_Z := -10.7
+const TRACK_Z := -17.6
 const TRACK_Y := 2.1
 const TRAIN_SPEED := 2.6
 ## How far the camera turns to look the way the robot is running.
 const SWIVEL := 0.06
 ## The front edge of the table, the spacing of the marquee bulbs along it, and how long a searchlight beam is.
-const TABLE_FRONT := 6.25
+const TABLE_FRONT := 8.6
 const BULB_GAP := 1.1
 const BEAM_LENGTH := 22.0
 
@@ -122,12 +122,12 @@ func _ready() -> void:
 	paint.set_shader_parameter("horizon", 0.04)
 	paint.set_shader_parameter("height", 0.5)
 	board.material_override = paint
-	board.position = Vector3(0.0, 25.0, -17.0)
+	board.position = Vector3(0.0, 25.0, -30.5)
 	add_child(board)
 
 	var table := MeshInstance3D.new()
 	var box := BoxMesh.new()
-	box.size = Vector3(250.0, 2.6, 28.5)
+	box.size = Vector3(250.0, 2.6, 39.6)
 	table.mesh = box
 	var ground := _shader("res://shaders/ground.gdshader")
 	for tex: String in ["planks_c", "planks_n", "planks_r", "grass_c", "grass_n", "asphalt_c", "asphalt_n"]:
@@ -136,23 +136,23 @@ func _ready() -> void:
 	ground.set_shader_parameter("mat_half", Vector2(City.HALF + 2.5, 0.0))
 	ground.set_shader_parameter("parks", Vector2(DISTRICTS[PARKS[0]], DISTRICTS[PARKS[1]]))
 	table.material_override = ground
-	table.position = Vector3(0.0, -1.3, -8.0)
+	table.position = Vector3(0.0, -1.3, -11.2)
 	add_child(table)
 
 	# The range repeats along the back, mirrored each time so the joins match up
 	for copy: int in [-1, 0, 1]:
-		_ridge("m_far", -15.0, 9.0, copy)
-		_ridge("m_mid", -13.0, 5.2, copy)
-		_ridge("m_near", -11.0, 3.4, copy)
+		_ridge("m_far", -28.0, 13.5, copy)
+		_ridge("m_mid", -25.5, 7.6, copy)
+		_ridge("m_near", -23.0, 4.4, copy)
 
 	var moon := Cutout.make("moon")
-	moon.position = Vector3(-6.4, 12.4, -16.0)
+	moon.position = Vector3(-6.4, 17.0, -29.5)
 	moon.scale = Vector3.ONE * 1.5
 	_hang(moon)
 	add_child(moon)
 	for i in 14:
 		var cloud := Cutout.make("cloud")
-		cloud.position = Vector3(-78.0 + i * 12.0 + _rng.randf_range(-3.0, 3.0), _rng.randf_range(9.0, 11.4), _rng.randf_range(-14.0, -12.0))
+		cloud.position = Vector3(-78.0 + i * 12.0 + _rng.randf_range(-3.0, 3.0), _rng.randf_range(12.0, 16.0), _rng.randf_range(-24.0, -20.0))
 		cloud.scale = Vector3.ONE * _rng.randf_range(0.9, 1.5)
 		cloud.set_tint(Color(0.95, 0.8, 0.9))
 		_hang(cloud)
@@ -168,8 +168,8 @@ func _ready() -> void:
 
 	# The parks: plywood trees scattered round the lake, a few this side of the street
 	for park: int in PARKS:
-		for i in 34:
-			var at := Vector3(_rng.randf_range(-9.0, 9.0), 0.0, _rng.randf_range(-9.0, -1.6) if i < 26 else _rng.randf_range(2.2, 4.8))
+		for i in 64:
+			var at := Vector3(_rng.randf_range(-9.0, 9.0), 0.0, _rng.randf_range(-15.6, -1.6) if i < 50 else _rng.randf_range(2.2, 7.6))
 			# Not in the water
 			if Vector2(at.x / 6.4, (at.z + 6.4) / 3.0).length() < 1.0:
 				continue
@@ -177,7 +177,7 @@ func _ready() -> void:
 			tree.mat.set_shader_parameter("chunk", 5.0)
 			tree.add_backing()
 			tree.position = at + Vector3(DISTRICTS[park], 0.0, 0.0)
-			tree.scale = Vector3.ONE * _rng.randf_range(0.75, 1.2)
+			tree.scale = Vector3.ONE * _rng.randf_range(0.38, 0.62)
 			add_child(tree)
 
 	# The railway along the back wall: a gravel embankment and a freight train that never stops
@@ -245,7 +245,7 @@ func _ready() -> void:
 		beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		# The cone hangs from a pivot at its point, so turning the pivot sweeps the beam
 		var lamp := Node3D.new()
-		lamp.position = Vector3(TOWNS[i / 2] + (-5.5 if i % 2 == 0 else 5.5), 0.3, -9.6)
+		lamp.position = Vector3(TOWNS[i / 2] + (-5.5 if i % 2 == 0 else 5.5), 0.3, -16.4)
 		beam.position.y = BEAM_LENGTH * 0.5
 		lamp.add_child(beam)
 		add_child(lamp)
@@ -254,7 +254,7 @@ func _ready() -> void:
 	# Hand-painted signs: the neighbourhoods, and the roadside-attraction kind
 	var signs: Array = [[-67.0, 1.0, "ALIEN\nXING", 0.06], [67.0, 1.0, "UFO\nPARKING", -0.05]]
 	for i in DISTRICTS.size():
-		signs.append([DISTRICTS[i] - (8.8 if i == 3 else 0.0), 5.3, NAMES[i], 0.05 if i % 2 == 0 else -0.04])
+		signs.append([DISTRICTS[i] - (8.8 if i == 3 else 0.0), 7.7, NAMES[i], 0.05 if i % 2 == 0 else -0.04])
 	for s: Array in signs:
 		var post := Cutout.make("sign", Cutout.PPU * 1.15, true)
 		post.position = Vector3(s[0], 0.0, s[1])

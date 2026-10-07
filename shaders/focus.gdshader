@@ -3,7 +3,7 @@ render_mode unshaded, depth_test_disabled, depth_draw_never, cull_disabled, fog_
 // The lens the whole view goes through, drawn as one sheet over it. Two looks at once:
 // - Tilt-shift: only a band around the play plane is sharp, and the table in front of it and the
 //   scenery behind it fall out of focus, so the set reads as a small model shot from close up.
-// - Nintendo 64: 15-bit colour with the console's dither. The low resolution itself is real: the
+// - Nintendo 64: a light dither to a reduced palette. The low resolution itself is real: the
 //   3D picture is rendered small and stretched (Diorama.set_quality), which is also what keeps
 //   phones fast.
 
@@ -17,7 +17,7 @@ uniform float strength = 3.0;
 uniform float saturation = 1.22;
 // Colour levels per channel (0 turns the dither off), and whether to blur at all: the lowest
 // quality setting skips it.
-uniform float levels = 32.0;
+uniform float levels = 64.0;
 uniform float blurring = 1.0;
 
 const float BAYER[16] = float[](0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0);

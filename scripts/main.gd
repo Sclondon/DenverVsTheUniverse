@@ -141,9 +141,8 @@ func _unhandled_input(e: InputEvent) -> void:
 				_touch = e.index
 				_touch_at = e.position
 		elif e.index == _touch:
-			# Letting go stops the robot where it is
+			# Letting go leaves it running to where the finger last was: a tap sends it, a drag leads it
 			_touch = -1
-			player.goal_x = player.x
 	elif e is InputEventScreenDrag and e.index == _touch:
 		_touch_at = e.position
 		# A flick upward is a jump too

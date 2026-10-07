@@ -1,10 +1,11 @@
 shader_type spatial;
 render_mode cull_disabled, specular_disabled;
 #include "res://shaders/splat.gdshaderinc"
-// A flat cut-out standing on the table, lit by the lamps overhead: art with an edge of bare
-// material (plywood, card) around its silhouette. `cut` tears the top off (buildings crumble from
-// the roof down) and scorches the torn edge. `solid` paints the whole shape one colour, for the
-// plywood backing board behind each building.
+// A cut-out standing on the table, lit by the lamps overhead. Two kinds:
+// - A flat sheet of art (a quad) with a rim of bare paper found round its silhouette (`border`).
+// - A piece of cardboard (`card`): a real thin slab cut to the outline of the art (Cutout.add_backing),
+//   with the art on its face, bare board on its edge and back (UV2.x = 1), paint splatter, and
+//   damage. `wear` (0 to 1) scorches it, then blows holes through it; `cut` brings the top down.
 
 uniform sampler2D tex : source_color, filter_linear_mipmap, repeat_disable;
 uniform vec2 texel = vec2(0.01);
@@ -13,21 +14,23 @@ uniform vec3 paper : source_color = vec3(0.97, 0.94, 0.86);
 uniform vec3 tint : source_color = vec3(1.0);
 uniform float flash = 0.0;
 uniform float cut = 1.0;
-uniform float solid = 0.0;
+uniform float wear = 0.0;
 // How much of its own colour the piece shows even in shadow.
 uniform float glow = 0.22;
 // Pixel art: the size of one chunky pixel, in texels, so each is drawn as one crisp block (0 = smooth art).
 uniform float chunk = 0.0;
-// Plywood: real wood grain on the bare edge and back, and showing faintly through the paint.
-uniform sampler2D wood : source_color, filter_linear_mipmap, repeat_enable;
-uniform float wooden = 0.0;
-// Flips the art left to right (turning the piece itself round would turn its face from the lamps).
+uniform float card = 0.0;
+// Mirrors the art on a flat sheet (`mirror`) or the whole slab (`flip`). Turning the piece itself
+// round would turn its face from the lamps.
 uniform float mirror = 0.0;
-varying vec2 grain_uv;
+uniform float flip = 0.0;
 varying vec2 world_xy;
 
 void vertex() {
-	grain_uv = VERTEX.xy * 0.3;
+	if (flip > 0.5) {
+		VERTEX.x = -VERTEX.x;
+		NORMAL.x = -NORMAL.x;
+	}
 	world_xy = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xy + MODEL_MATRIX[3].z * 3.7;
 	if (mirror > 0.5) {
 		UV.x = 1.0 - UV.x;
@@ -40,34 +43,43 @@ void fragment() {
 		vec2 cell = texel * chunk;
 		c = textureGrad(tex, (floor(UV / cell) + 0.5) * cell, dFdx(UV), dFdy(UV));
 	}
-	vec2 o = texel * border;
-	vec2 d = o * 0.7071;
-	float edge = c.a;
-	if (UV2.x < 0.5) {
-	edge = max(edge, texture(tex, UV + vec2(o.x, 0.0)).a);
-	edge = max(edge, texture(tex, UV - vec2(o.x, 0.0)).a);
-	edge = max(edge, texture(tex, UV + vec2(0.0, o.y)).a);
-	edge = max(edge, texture(tex, UV - vec2(0.0, o.y)).a);
-	edge = max(edge, texture(tex, UV + d).a);
-	edge = max(edge, texture(tex, UV - d).a);
-	edge = max(edge, texture(tex, UV + vec2(d.x, -d.y)).a);
-	edge = max(edge, texture(tex, UV + vec2(-d.x, d.y)).a);
-	}
-	// The layers behind the face are cut to the art itself; only the face has the routed rim
-	if (edge < 0.5 || (UV2.x > 0.5 && c.a < 0.5)) {
-		discard;
-	}
 	vec3 col = mix(paper, c.rgb, smoothstep(0.35, 0.65, c.a));
-	// Layers behind the face (UV2.x = 1) are bare board: the thickness of the sheet
-	float bare = max(solid, UV2.x);
-	col = mix(col, paper, bare);
-	if (wooden > 0.0) {
-		vec3 g = texture(wood, grain_uv).rgb;
-		float painted = smoothstep(0.35, 0.65, c.a) * (1.0 - bare);
-		col = mix(g * 1.5 * (1.0 - 0.3 * UV2.y), col, painted);
-		// Whoever painted it was not careful: splatter on the bare wood, the odd fleck on the art
-		vec4 paint = splatter(world_xy * 1.1, mix(0.45, 0.025, painted));
+	if (card < 0.5) {
+		// A flat sheet: keep the art and a rim of paper round it
+		vec2 o = texel * border;
+		vec2 d = o * 0.7071;
+		float edge = c.a;
+		edge = max(edge, texture(tex, UV + vec2(o.x, 0.0)).a);
+		edge = max(edge, texture(tex, UV - vec2(o.x, 0.0)).a);
+		edge = max(edge, texture(tex, UV + vec2(0.0, o.y)).a);
+		edge = max(edge, texture(tex, UV - vec2(0.0, o.y)).a);
+		edge = max(edge, texture(tex, UV + d).a);
+		edge = max(edge, texture(tex, UV - d).a);
+		edge = max(edge, texture(tex, UV + vec2(d.x, -d.y)).a);
+		edge = max(edge, texture(tex, UV + vec2(-d.x, d.y)).a);
+		if (edge < 0.5) {
+			discard;
+		}
+	} else {
+		float painted = step(0.5, c.a) * (1.0 - UV2.x);
+		// Bare cardboard: kraft brown, with the flutes showing as stripes along the cut edge
+		vec3 board = paper * (0.86 + 0.14 * splat_hash(floor(world_xy * 30.0))) * (1.0 - 0.25 * UV2.y * step(0.5, fract(world_xy.y * 14.0 + world_xy.x * 14.0)));
+		col = mix(board, col, painted);
+		// Whoever painted it was not careful: splatter on the bare board, the odd fleck on the art
+		vec4 paint = splatter(world_xy * 1.1, mix(0.45, 0.01, painted));
 		col = mix(col, paint.rgb, paint.a * 0.92);
+		if (wear > 0.02) {
+			// Damage comes in stages: grime, then scorch marks, then holes blown clean through
+			vec2 at = world_xy * 1.5 + 31.0;
+			vec4 burn = splatter(at, wear * 0.75);
+			col = mix(col, vec3(0.07, 0.06, 0.07), burn.a * 0.88 * painted);
+			col *= 1.0 - 0.3 * wear;
+			if (wear > 0.28 && splatter(at, (wear - 0.28) * 0.7).a > 0.9) {
+				discard;
+			}
+			// Ember glow round fresh holes
+			col += vec3(1.0, 0.35, 0.05) * burn.a * (1.0 - burn.a) * 1.6 * wear * painted;
+		}
 	}
 	if (cut < 0.999) {
 		float h = 1.0 - UV.y;

@@ -12,7 +12,7 @@ uniform sampler2D grass_n : hint_normal, filter_linear_mipmap_anisotropic, repea
 uniform sampler2D asphalt_c : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D asphalt_n : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform vec2 mat_half = vec2(68.5, 0.0);
-uniform vec2 mat_z = vec2(-16.6, 5.5);
+uniform vec2 mat_z = vec2(-28.6, 7.9);
 // Centres of the two parks along the table, and half their length.
 uniform vec2 parks = vec2(-37.7, 37.7);
 uniform float park_half = 9.3;
