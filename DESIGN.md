@@ -100,7 +100,7 @@ style over the neighbourhoods nearest the robot; every fifth wave is a mothershi
 
 ## Controls
 
-Phones first. Tap where the robot should go and it runs there; drag and it follows the finger. It aims and fires by itself. Jump and Dash appear as two big cardboard
+Phones first. Hold and drag: the robot runs toward your finger and stops the moment you let go. It aims and fires by itself. Jump and Dash appear as two big cardboard
 buttons at the bottom right once their cards are picked. Keyboard: arrows or A/D to run, Space, Up
 or W to jump, Shift to dash.
 
