@@ -6,6 +6,8 @@ extends Node3D
 
 ## Limb pivots by name ("arm_l", "leg_r", ...), for the ones that swing.
 var limbs := {}
+## The model itself, under this node: turn it to tumble the figure about its middle.
+var body: Node3D
 
 ## Each figure's own copy of the model's materials, so one can flash or change colour by itself:
 ## the copy, and the colours it was made with.
@@ -17,9 +19,10 @@ var _flash := 0.0
 ## Loads models/<model>.glb as this figure's body.
 func build(model: String) -> void:
 	var scene: PackedScene = load("res://models/%s.glb" % model)
-	var body := scene.instantiate()
-	add_child(body)
-	_adopt(body, {})
+	var made: Node3D = scene.instantiate()
+	add_child(made)
+	body = made
+	_adopt(made, {})
 
 
 func flash(amount := 1.0) -> void:

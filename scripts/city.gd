@@ -51,24 +51,29 @@ const ROWS := [
 	[48.2, 65.0, -2.8, ["low"], 0.6, "b0f0e0"],
 	[48.0, 65.4, -1.5, ["low"], 0.8, "ffe6a0"],
 	# The parks: just the houses along their far side
-	[-46.6, -28.8, -10.4, ["low"], 0.9, "d8d8e6"],
-	[28.8, 46.6, -10.4, ["low"], 0.9, "d8d8e6"],
+	[-46.6, -28.8, -9.4, ["low"], 0.9, "d8d8e6"],
+	[28.8, 46.6, -9.4, ["low"], 0.9, "d8d8e6"],
 	# The stretches either side of downtown
 	[-10.3, -8.1, -3.2, ["low"], 0.4, "d8d8e6"],
 	[-10.3, -8.1, -1.6, ["low"], 0.8, "ffffff"],
 	[8.1, 10.3, -3.2, ["low"], 0.4, "d8d8e6"],
 	[8.1, 10.3, -1.6, ["low"], 0.8, "ffffff"],
-	# This side of the street the city carries on toward the table edge, so the street cuts through
-	# the middle of it. Low roofs only, so the robot stays in view (the parks are left open).
-	[-65.5, -48.0, 1.9, ["low"], 1.1, "ffffff"],
-	[-27.5, 27.5, 1.9, ["low"], 1.1, "ffffff"],
-	[48.0, 65.5, 1.9, ["low"], 1.1, "ffffff"],
-	[-65.3, -48.2, 3.0, ["low"], 0.7, "f0f0ff"],
-	[-27.3, 27.3, 3.0, ["low"], 0.7, "f0f0ff"],
-	[48.2, 65.3, 3.0, ["low"], 0.7, "f0f0ff"],
-	[-65.5, -48.0, 4.1, ["low"], 0.5, "e6e6f6"],
-	[-27.5, 27.5, 4.1, ["low"], 0.5, "e6e6f6"],
-	[48.0, 65.5, 4.1, ["low"], 0.5, "e6e6f6"],
+]
+## The city is deep as well as long. Every built-up stretch (from x, to x) also gets these rows:
+## z, heights to draw from, widest gap, tint. Behind the street they run back to the foothills,
+## dimmer with distance; this side of it they run to the table edge, low so the robot stays in view.
+const STRETCHES := [[-65.5, -48.0], [-27.6, 27.6], [48.0, 65.5]]
+const DEPTH := [
+	[-5.5, ["mid", "low", "mid"], 0.3, "c0c0de"],
+	[-6.6, ["low", "mid"], 0.3, "b4b4d6"],
+	[-7.7, ["low", "mid", "low"], 0.4, "a8a8cc"],
+	[-8.8, ["low"], 0.4, "9c9cc2"],
+	[1.9, ["low"], 0.9, "ffffff"],
+	[2.8, ["low"], 0.6, "f4f4ff"],
+	[3.7, ["low"], 0.5, "ececfa"],
+	[4.6, ["low"], 0.4, "e4e4f4"],
+	[5.5, ["low"], 0.4, "dcdcee"],
+	[6.4, ["low"], 0.4, "d4d4e8"],
 ]
 
 
@@ -104,7 +109,11 @@ var buildings: Array[Building] = []
 func _ready() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 5280
-	for row: Array in ROWS:
+	var rows: Array = ROWS.duplicate()
+	for stretch: Array in STRETCHES:
+		for d: Array in DEPTH:
+			rows.append([stretch[0], stretch[1], d[0], d[1], d[2], d[3]])
+	for row: Array in rows:
 		var x: float = row[0]
 		while x < row[1]:
 			var kinds: Array = ART[row[3][rng.randi() % row[3].size()]]

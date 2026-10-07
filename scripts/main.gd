@@ -117,7 +117,7 @@ func _process(delta: float) -> void:
 	if state != State.TITLE:
 		hud.set_stats(score, wave, player.hearts, player.max_hearts, city.percent())
 		_point_at_threats()
-	diorama.update_camera(delta, player.x)
+	diorama.update_camera(delta, player.x, player.heading())
 
 
 func _unhandled_input(e: InputEvent) -> void:
@@ -341,6 +341,7 @@ func _next_wave() -> void:
 
 func _wave_cleared() -> void:
 	state = State.CLEARED
+	player.celebrate()
 	_clear_t = 2.0
 	var bonus := 5 * wave * city.percent()
 	score += bonus

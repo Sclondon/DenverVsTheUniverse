@@ -9,7 +9,11 @@ const BASE_HEARTS := 6
 const GUN_X := 0.92
 ## The model is built 3 units tall; the robot stands this much bigger.
 const SIZE := 1.4
-const DASH_SPEED := 42.0
+const DASH_SPEED := 30.0
+const DASH_TIME := 0.26
+const SPIN_TIME := 0.38
+## The point the model turns about when it flips, in its own units.
+const MIDDLE := Vector3(0.0, 1.6, 0.0)
 const GRAVITY := 30.0
 ## Per chassis (stock, Strike Eagle, awakened): extra hearts, height the shots leave from, hit box
 ## (half width, centre height, half height) and seconds for the A.T. field to recharge (0 = none).
@@ -60,6 +64,13 @@ var _arm_aim := 0.0
 var _dash_t := 0.0
 var _dash_dir := 0.0
 var _dash_cool := 0.0
+var _air_t := 0.0
+var _air_len := 0.0
+var _flips := 1.0
+var _land := 0.0
+var _spin_t := 0.0
+var _spin_dir := 1.0
+var _was_facing := 1.0
 
 
 func _init() -> void:
@@ -113,10 +124,24 @@ func dash(dir: float) -> void:
 	if dash_level == 0 or _dash_cool > 0.0:
 		return
 	_dash_dir = signf(dir) if dir != 0.0 else facing
-	_dash_t = 0.17
+	_dash_t = DASH_TIME
 	_dash_cool = 1.6 if dash_level == 1 else 0.8
-	invuln = maxf(invuln, 0.3)
+	invuln = maxf(invuln, DASH_TIME + 0.1)
 	Sfx.play("missile", 1.7, -8.0)
+
+
+## A showy backflip on the spot, for when a wave is beaten. Needs no card.
+func celebrate() -> void:
+	if y > 0.0:
+		return
+	_vy = 10.0
+	_take_off(-1.0)
+
+
+func _take_off(flips: float) -> void:
+	_air_t = 0.0
+	_air_len = 2.0 * _vy / GRAVITY
+	_flips = flips
 
 
 ## A leap on the engines. Needs the Vertical Takeoff card.
@@ -124,7 +149,13 @@ func jump() -> void:
 	if jump_level == 0 or y > 0.0:
 		return
 	_vy = 13.0 if jump_level == 1 else 15.5
+	_take_off(1.0 if jump_level == 1 else 2.0)
 	Sfx.play("missile", 0.8, -8.0)
+
+
+## Which way it is running and how hard: -1 (flat out left) to 1.
+func heading() -> float:
+	return _lean
 
 
 func overlaps(p: Vector2, r: float) -> bool:
@@ -165,6 +196,7 @@ func update(delta: float, firing: bool) -> void:
 		if y == 0.0:
 			_vy = 0.0
 			game.diorama.shake(0.25)
+			_land = 0.16
 	_lean = lerpf(_lean, (x - before) / maxf(delta, 0.001) / speed, 1.0 - exp(-10.0 * delta))
 	invuln = maxf(0.0, invuln - delta)
 	overdrive = maxf(0.0, overdrive - delta)
@@ -192,15 +224,55 @@ func update(delta: float, firing: bool) -> void:
 	if _drone_t <= 0.0:
 		_drone_t = 0.8
 	_recoil = maxf(0.0, _recoil - delta * 6.0)
-	# It runs: legs and the free arm swing, and the gun arm stays raised to the sky
-	stride(x * 3.0)
+	_acrobatics(delta)
+	position = Vector3(x, y + absf(sin(x * 3.0)) * 0.12, 0.0)
+	rotation.z = -_lean * 0.12
+	var squash := maxf(_recoil * 0.05, _land * 0.9)
+	scale = Vector3(1.0 + squash * 0.8, 1.0 - squash, 1.0) * SIZE
+	fade_flash(delta)
+
+
+## The robot is an acrobat: it turns its shoulders into a run, spins on its heel when it doubles
+## back, cartwheels through a dash and tucks into a flip when it leaves the ground.
+func _acrobatics(delta: float) -> void:
+	stride(x * 3.0, 0.75)
 	limbs.arm_r.rotation.x = PI - 0.1 + _recoil * 0.12
 	_arm_aim = lerp_angle(_arm_aim, _aim, 1.0 - exp(-18.0 * delta))
 	limbs.arm_r.rotation.z = _arm_aim
-	position = Vector3(x, y + absf(sin(x * 3.0)) * 0.12, 0.0)
-	rotation.z = -_lean * 0.09 - (_dash_dir * 0.35 if _dash_t > 0.0 else 0.0)
-	scale = Vector3(1.0 + _recoil * 0.04, 1.0 - _recoil * 0.05, 1.0) * SIZE
-	fade_flash(delta)
+	limbs.arm_l.rotation.z = 0.0
+	_land = maxf(0.0, _land - delta)
+	if facing != _was_facing and absf(_lean) > 0.45 and _spin_t <= 0.0:
+		_spin_t = SPIN_TIME
+		_spin_dir = facing
+	_was_facing = facing
+	var yaw := _lean * 0.5
+	var roll := 0.0
+	var flip := 0.0
+	if _spin_t > 0.0:
+		_spin_t -= delta
+		yaw += _spin_dir * TAU * ease(1.0 - maxf(_spin_t, 0.0) / SPIN_TIME, -2.0)
+	if _dash_t > 0.0:
+		roll = -_dash_dir * TAU * (1.0 - _dash_t / DASH_TIME)
+		limbs.arm_l.rotation.z = -2.6
+		limbs.leg_l.rotation.x = 0.0
+		limbs.leg_r.rotation.x = 0.0
+		limbs.leg_l.rotation.z = -0.5
+		limbs.leg_r.rotation.z = 0.5
+	else:
+		limbs.leg_l.rotation.z = 0.0
+		limbs.leg_r.rotation.z = 0.0
+	if y > 0.0 and _air_len > 0.0:
+		_air_t += delta
+		var through := clampf(_air_t / _air_len, 0.0, 1.0)
+		flip = TAU * ease(through, -1.6) * _flips
+		# Knees up and the free arm out while it turns over
+		var tuck := sin(through * PI)
+		limbs.leg_l.rotation.x = -1.5 * tuck
+		limbs.leg_r.rotation.x = -1.2 * tuck
+		limbs.arm_l.rotation.z = -1.4 * tuck
+	# Everything turns about the robot's middle, not its feet
+	var turn := Basis(Vector3.UP, yaw) * Basis(Vector3.BACK, roll) * Basis(Vector3.RIGHT, flip)
+	body.transform = Transform3D(turn, MIDDLE - turn * MIDDLE)
 
 
 ## The nearest alien within reach of the gun, or null.

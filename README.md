@@ -16,7 +16,8 @@ Godot 4.7, GL Compatibility, built for the web (the Scareathon arcade) and phone
   `godot --headless --path . -s tools/cut_buildings.gd` after changing them. `City.ROWS` and `City.LANDMARKS`
   lay the districts out.
 - The robot and every alien are 3D models built in Blender by `tools/blender/figures.py` and exported to `models/*.glb`; re-run it with `blender -b --python tools/blender/figures.py -- --out=models [--preview=<dir>]` after changing a model. `scripts/figure.gd` loads them.
-- Three shadow-casting spot lamps light the table (`Diorama._ready`); the sky board, mountains and table are lit too.
+- A lamp hangs over each of the seven districts (`Diorama.DISTRICTS`); the nearest three cast shadows. The table, turf and street use CC0 textures in `textures/`. Trees and the train along the back wall are pixel-art plywood cut-outs like the buildings.
+- The whole view goes through `shaders/focus.gdshader`: tilt-shift blur away from the play plane, and an N64 look (low line count, 15-bit dithered colour). Set its `lines` to 0 to turn the N64 part off.
 
 ## Playing
 

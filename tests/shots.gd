@@ -34,6 +34,7 @@ func _run() -> void:
 	await _wait(1.5)
 	await _snap("1_title")
 	main.start_game()
+	_tough()
 	await _wait(5.0)
 	await _snap("2_wave1")
 	for x: float in [-37.7, 56.6]:
@@ -50,6 +51,7 @@ func _run() -> void:
 	main.defenses.sync(main.levels)
 	main.wave = 6
 	main._next_wave()
+	_tough()
 	main.hurt_building(main.city.by_id("cash"), 4, Vector3.ZERO)
 	main.hurt_building(main.city.by_id("union"), 9, Vector3.ZERO)
 	main.hurt_building(main.city.by_id("qwest"), 2, Vector3.ZERO)
@@ -65,9 +67,16 @@ func _run() -> void:
 	main.pick_card(0)
 	main.wave = 9
 	main._next_wave()
+	_tough()
 	await _wait(9.0)
 	await _snap("5_boss")
 	main.player.hearts = 0
 	await _wait(1.6)
 	await _snap("6_over")
 	quit()
+
+
+## The robot aims for itself now, so the wave has to outlast the camera.
+func _tough() -> void:
+	for a in main.swarm.aliens:
+		a.hp = 99999.0

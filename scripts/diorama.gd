@@ -20,6 +20,12 @@ const PARKS := [1, 5]
 const TOWNS := [-56.6, -18.9, 0.0, 18.9, 56.6]
 ## Only the lamps this close to the camera cast shadows.
 const SHADOW_REACH := 28.0
+## The railway embankment along the back wall: where it is and how high the train rides.
+const TRACK_Z := -10.7
+const TRACK_Y := 2.1
+const TRAIN_SPEED := 2.6
+## How far the camera turns to look the way the robot is running.
+const SWIVEL := 0.11
 
 var font: Font
 var camera: Camera3D
@@ -33,6 +39,10 @@ var _shake := 0.0
 var _clouds: Array[Cutout] = []
 var _lamps: Array[SpotLight3D] = []
 var _lens: ShaderMaterial
+## The train: each car with how far behind the front of the engine it rides.
+var _train: Array = []
+var _train_x := -30.0
+var _swivel := 0.0
 var _rng := RandomNumberGenerator.new()
 
 
@@ -127,24 +137,48 @@ func _ready() -> void:
 		pine.scale = Vector3.ONE * p[2]
 		add_child(pine)
 
-	# The parks: model trees scattered round the lake, a few this side of the street
-	var trees: Array[PackedScene] = [load("res://models/tree_a.glb"), load("res://models/tree_b.glb"), load("res://models/tree_c.glb")]
+	# The parks: plywood trees scattered round the lake, a few this side of the street
 	for park: int in PARKS:
 		for i in 34:
-			var at := Vector3(_rng.randf_range(-9.0, 9.0), 0.0, _rng.randf_range(-9.6, -1.6) if i < 26 else _rng.randf_range(2.2, 4.0))
+			var at := Vector3(_rng.randf_range(-9.0, 9.0), 0.0, _rng.randf_range(-9.0, -1.6) if i < 26 else _rng.randf_range(2.2, 6.4))
 			# Not in the water
 			if Vector2(at.x / 6.4, (at.z + 6.4) / 3.0).length() < 1.0:
 				continue
-			var tree: Node3D = trees[_rng.randi() % (3 if i % 5 == 0 else 2)].instantiate()
+			var tree := Cutout.make("px/tree_%s" % ["a", "b", "c" if i % 5 == 0 else "a"][_rng.randi() % 3], City.PPU, true)
+			tree.mat.set_shader_parameter("chunk", 5.0)
+			tree.add_backing()
 			tree.position = at + Vector3(DISTRICTS[park], 0.0, 0.0)
-			tree.rotation.y = _rng.randf() * TAU
-			tree.scale = Vector3.ONE * _rng.randf_range(0.75, 1.25)
+			tree.scale = Vector3.ONE * _rng.randf_range(0.75, 1.2)
 			add_child(tree)
+
+	# The railway along the back wall: a gravel embankment and a freight train that never stops
+	var bank := MeshInstance3D.new()
+	var bank_box := BoxMesh.new()
+	bank_box.size = Vector3(2.0 * City.HALF + 20.0, TRACK_Y, 0.9)
+	bank.mesh = bank_box
+	var gravel := StandardMaterial3D.new()
+	gravel.albedo_texture = load("res://textures/asphalt_color.jpg")
+	gravel.albedo_color = Color(0.75, 0.66, 0.56)
+	gravel.uv1_triplanar = true
+	gravel.uv1_scale = Vector3.ONE * 0.4
+	gravel.roughness = 0.95
+	bank.material_override = gravel
+	bank.position = Vector3(0.0, TRACK_Y * 0.5, TRACK_Z)
+	add_child(bank)
+	var along := 0.0
+	for art: String in ["train_loco", "train_car1", "train_car2", "train_car3", "train_car2", "train_car1", "train_car3"]:
+		var car := Cutout.make("px/" + art, City.PPU, true)
+		car.mat.set_shader_parameter("chunk", 5.0)
+		car.add_backing()
+		add_child(car)
+		along -= car.size.x * 0.5 - Cutout.PAD / City.PPU
+		_train.append([car, along])
+		along -= car.size.x * 0.5 - Cutout.PAD / City.PPU + 0.06
 
 	# Hand-painted signs: the neighbourhoods, and the roadside-attraction kind
 	var signs: Array = [[-67.0, 1.0, "ALIEN\nXING", 0.06], [67.0, 1.0, "UFO\nPARKING", -0.05]]
 	for i in DISTRICTS.size():
-		signs.append([DISTRICTS[i] - (8.8 if i == 3 else 0.0), 5.0, NAMES[i], 0.05 if i % 2 == 0 else -0.04])
+		signs.append([DISTRICTS[i] - (8.8 if i == 3 else 0.0), 7.0, NAMES[i], 0.05 if i % 2 == 0 else -0.04])
 	for s: Array in signs:
 		var post := Cutout.make("sign", Cutout.PPU * 1.15, true)
 		post.position = Vector3(s[0], 0.0, s[1])
@@ -186,7 +220,7 @@ func shake(amount: float) -> void:
 
 
 ## Fits the play box to the window and tracks along the table after the robot.
-func update_camera(delta: float, focus_x: float) -> void:
+func update_camera(delta: float, focus_x: float, heading := 0.0) -> void:
 	var view := get_viewport().get_visible_rect().size
 	var aspect := view.x / maxf(view.y, 1.0)
 	var t := tan(deg_to_rad(FOV) * 0.5)
@@ -202,8 +236,15 @@ func update_camera(delta: float, focus_x: float) -> void:
 	_shake = maxf(0.0, _shake - delta * 1.6)
 	var jolt := Vector3(_rng.randf_range(-1.0, 1.0), _rng.randf_range(-1.0, 1.0), 0.0) * _shake * _shake
 	var target := Vector3(_cam_x, centre, 0.0)
-	camera.position = target + Vector3(sin(YAW) * cos(PITCH), sin(PITCH), cos(YAW) * cos(PITCH)) * dist + jolt
-	camera.look_at(target + jolt)
+	# The camera swings a little toward the way the robot is heading (`heading`, -1 to 1)
+	_swivel = lerpf(_swivel, clampf(heading, -1.0, 1.0) * SWIVEL, 1.0 - exp(-2.5 * delta))
+	camera.position = target + Vector3(sin(YAW - _swivel) * cos(PITCH), sin(PITCH), cos(YAW - _swivel) * cos(PITCH)) * dist + jolt
+	camera.look_at(target + jolt + Vector3(_swivel * 14.0, 0.0, 0.0))
+	_train_x += TRAIN_SPEED * delta
+	if _train_x > City.HALF + 40.0:
+		_train_x = -City.HALF - 12.0
+	for car: Array in _train:
+		car[0].position = Vector3(_train_x + car[1], TRACK_Y + absf(sin((_train_x + car[1]) * 6.0)) * 0.015, TRACK_Z)
 	for lamp in _lamps:
 		lamp.shadow_enabled = absf(lamp.position.x - _cam_x) < SHADOW_REACH
 	for cloud in _clouds:
