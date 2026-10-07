@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="170" height="480" viewBox="0 0 170 480">
+<g stroke="#22223b" stroke-width="5" stroke-linejoin="round">
+<rect x="58" y="14" width="54" height="20" fill="#b9b6ad"/>
+<rect x="14" y="32" width="142" height="438" fill="#e4e0d6"/>
+</g>
+<g fill="#4a5a70">
+<rect x="27" y="50" width="12" height="404"/>
+<rect x="48" y="50" width="12" height="404"/>
+<rect x="69" y="50" width="12" height="404"/>
+<rect x="90" y="50" width="12" height="404"/>
+<rect x="111" y="50" width="12" height="404"/>
+<rect x="132" y="50" width="12" height="404"/>
+</g>
+<g fill="#ffd27a">
+<rect x="48" y="120" width="12" height="14"/>
+<rect x="111" y="204" width="12" height="14"/>
+<rect x="27" y="288" width="12" height="14"/>
+<rect x="90" y="330" width="12" height="14"/>
+<rect x="132" y="92" width="12" height="14"/>
+<rect x="69" y="414" width="12" height="14"/>
+</g>
+<g stroke="#e4e0d6" stroke-width="5">
+<path d="M17,78 H153 M17,106 H153 M17,134 H153 M17,162 H153 M17,190 H153 M17,218 H153 M17,246 H153 M17,274 H153 M17,302 H153 M17,330 H153 M17,358 H153 M17,386 H153 M17,414 H153 M17,442 H153"/>
+</g>
+</svg>

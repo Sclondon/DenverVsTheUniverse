@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2048" height="360" viewBox="0 0 2048 360">
+<!-- Mount Blue Sky (Evans) as seen from Denver: the broad summit left of centre, the long ridge falling away north -->
+<defs>
+<linearGradient id="snow" gradientUnits="userSpaceOnUse" x1="0" y1="30" x2="0" y2="360">
+<stop offset="0" stop-color="#fdfcff"/><stop offset="0.45" stop-color="#e2def3"/><stop offset="1" stop-color="#8990cc"/>
+</linearGradient>
+</defs>
+<path d="M0,360 L0,210 L140,190 L280,200 L420,176 L535,166 L650,186 L696,136 L789,86 L850,56 L881,38 L904,30 L927,34 L958,56 L981,62 L1004,50 L1034,86 L1080,126 L1111,146 L1157,166 L1219,116 L1249,126 L1311,176 L1349,146 L1388,106 L1441,126 L1518,176 L1564,166 L1626,142 L1687,166 L1772,216 L1841,236 L1956,236 L2048,244 L2048,360 Z" fill="url(#snow)" stroke="#161621" stroke-width="4" stroke-linejoin="round"/>
+<g fill="#d9d5ef">
+<path d="M881,38 L904,30 L958,56 L946,116 L900,92 Z"/>
+<path d="M1004,50 L1034,86 L1080,126 L1044,156 L1000,112 Z"/>
+<path d="M1219,116 L1249,126 L1311,176 L1262,186 Z"/>
+<path d="M1388,106 L1441,126 L1518,176 L1452,190 Z"/>
+<path d="M696,136 L789,86 L776,150 L724,176 Z"/>
+<path d="M1626,142 L1687,166 L1772,216 L1700,214 Z"/>
+<path d="M420,176 L535,166 L560,206 L470,214 Z"/>
+<path d="M140,190 L280,200 L250,230 L170,226 Z"/>
+</g>
+<g fill="#c4c0e6">
+<path d="M806,150 L860,120 L880,170 L846,214 L800,196 Z"/>
+<path d="M930,150 L990,150 L1020,210 L960,236 L924,200 Z"/>
+<path d="M1120,196 L1180,176 L1230,226 L1160,250 Z"/>
+<path d="M600,220 L680,200 L720,246 L640,262 Z"/>
+<path d="M1340,206 L1420,196 L1470,244 L1380,256 Z"/>
+</g>
+</svg>

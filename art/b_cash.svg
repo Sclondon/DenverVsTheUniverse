@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="212" height="430" viewBox="0 0 212 430">
+<g stroke="#22223b" stroke-width="5" stroke-linejoin="round">
+<path d="M40,420 V140 Q40,40 130,22 H172 V420 Z" fill="#c9a184"/>
+<path d="M60,420 V148 Q60,66 134,44 H154 V420 Z" fill="#6d8fb0" stroke-width="4"/>
+</g>
+<g stroke="#c9a184" stroke-width="4" fill="none">
+<path d="M98,62 H154 M76,92 H154 M64,122 H154 M60,152 H154 M60,182 H154 M60,212 H154 M60,242 H154 M60,272 H154 M60,302 H154 M60,332 H154 M60,362 H154"/>
+<path d="M107,54 V380 M131,46 V380 M83,84 V380"/>
+</g>
+<g fill="#ffd27a">
+<rect x="85" y="186" width="20" height="24"/>
+<rect x="109" y="276" width="20" height="24"/>
+<rect x="62" y="306" width="19" height="24"/>
+<rect x="133" y="126" width="19" height="24"/>
+</g>
+<g stroke="#22223b" stroke-width="5" stroke-linejoin="round">
+<rect x="14" y="378" width="184" height="42" fill="#b08a70"/>
+</g>
+<g fill="#4a5a70">
+<rect x="28" y="390" width="22" height="30"/>
+<rect x="62" y="390" width="22" height="30"/>
+<rect x="128" y="390" width="22" height="30"/>
+<rect x="162" y="390" width="22" height="30"/>
+</g>
+<rect x="96" y="388" width="20" height="32" fill="#ffd27a"/>
+</svg>

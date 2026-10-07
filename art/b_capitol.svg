@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="330" height="315" viewBox="0 0 330 315">
+<g stroke="#22223b" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
+<path d="M165,34 V14" fill="none"/>
+<circle cx="165" cy="36" r="9" fill="#f4b728"/>
+<rect x="154" y="42" width="22" height="24" fill="#d9d6c8"/>
+<path d="M120,136 Q120,62 165,62 Q210,62 210,136 Z" fill="#f4b728"/>
+<rect x="122" y="134" width="86" height="68" fill="#d9d6c8"/>
+<rect x="14" y="218" width="302" height="87" fill="#cfccbd"/>
+<rect x="8" y="208" width="314" height="14" fill="#e4e0d6"/>
+<path d="M98,226 L165,192 L232,226 Z" fill="#e4e0d6"/>
+<rect x="104" y="226" width="122" height="62" fill="#b9b6a8"/>
+<rect x="96" y="286" width="138" height="19" fill="#e4e0d6"/>
+</g>
+<g fill="#f6f3ea" stroke="#22223b" stroke-width="3">
+<rect x="110" y="230" width="10" height="56"/>
+<rect x="130" y="230" width="10" height="56"/>
+<rect x="150" y="230" width="10" height="56"/>
+<rect x="170" y="230" width="10" height="56"/>
+<rect x="190" y="230" width="10" height="56"/>
+<rect x="210" y="230" width="10" height="56"/>
+</g>
+<g fill="#4a5a70">
+<rect x="28" y="236" width="14" height="24"/>
+<rect x="52" y="236" width="14" height="24"/>
+<rect x="76" y="236" width="14" height="24"/>
+<rect x="240" y="236" width="14" height="24"/>
+<rect x="264" y="236" width="14" height="24"/>
+<rect x="288" y="236" width="14" height="24"/>
+<rect x="28" y="270" width="14" height="22"/>
+<rect x="76" y="270" width="14" height="22"/>
+<rect x="240" y="270" width="14" height="22"/>
+<rect x="288" y="270" width="14" height="22"/>
+<rect x="134" y="146" width="10" height="44"/>
+<rect x="160" y="146" width="10" height="44"/>
+<rect x="186" y="146" width="10" height="44"/>
+</g>
+<g fill="#ffd27a">
+<rect x="52" y="270" width="14" height="22"/>
+<rect x="264" y="270" width="14" height="22"/>
+</g>
+<path d="M134,118 Q138,84 160,74" fill="none" stroke="#ffe08a" stroke-width="6" stroke-linecap="round"/>
+<path d="M146,136 V70 M165,136 V64 M184,136 V70" fill="none" stroke="#c98f12" stroke-width="3"/>
+</svg>

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="190" height="270" viewBox="0 0 190 270">
+<!-- A brain-dome Martian action figure, cape and all -->
+<g stroke="#161621" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
+<path d="M56,118 L30,232 H160 L134,118 Z" fill="#b0122e"/>
+<path d="M60,120 L40,172 L52,178 L72,132 Z" fill="#2f8f8a"/>
+<path d="M130,120 L150,172 L138,178 L118,132 Z" fill="#2f8f8a"/>
+<path d="M78,184 L70,238 H90 L94,190 Z M112,184 L120,238 H100 L96,190 Z" fill="#2f8f8a"/>
+<path d="M60,236 H92 V252 H54 Z M130,236 H98 V252 H136 Z" fill="#20242c"/>
+<path d="M68,114 H122 L114,190 H76 Z" fill="#3fb5ae"/>
+<path d="M62,64 Q62,110 95,110 Q128,110 128,64 Z" fill="#8be04e"/>
+<path d="M50,68 Q42,10 95,10 Q148,10 140,68 Z" fill="#f08ab0"/>
+<circle cx="78" cy="74" r="13" fill="#fff6d8"/>
+<circle cx="112" cy="74" r="13" fill="#fff6d8"/>
+<path d="M80,94 H110 V104 H80 Z" fill="#fff6d8" stroke-width="3"/>
+</g>
+<path d="M62,52 Q70,36 82,48 Q90,32 102,46 Q112,32 124,50 M70,30 Q80,20 92,28 Q104,18 116,30 M95,12 V26" fill="none" stroke="#b0447a" stroke-width="4" stroke-linecap="round"/>
+<circle cx="78" cy="75" r="5" fill="#0b0b12"/>
+<circle cx="112" cy="75" r="5" fill="#0b0b12"/>
+<path d="M88,94 v10 M95,94 v10 M102,94 v10" stroke="#161621" stroke-width="3"/>
+<g fill="#20242c" stroke="#161621" stroke-width="3">
+<circle cx="66" cy="124" r="8"/><circle cx="124" cy="124" r="8"/><circle cx="84" cy="190" r="7"/><circle cx="106" cy="190" r="7"/>
+</g>
+<circle cx="95" cy="140" r="10" fill="#ffe14a" stroke="#161621" stroke-width="3"/>
+</svg>

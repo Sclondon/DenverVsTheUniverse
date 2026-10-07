@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2048" height="260" viewBox="0 0 2048 260">
+<!-- The snowy foothills: Green Mountain and the hogback -->
+<defs>
+<linearGradient id="hill" gradientUnits="userSpaceOnUse" x1="0" y1="60" x2="0" y2="260">
+<stop offset="0" stop-color="#ffffff"/><stop offset="0.6" stop-color="#dfe2f4"/><stop offset="1" stop-color="#a9afd9"/>
+</linearGradient>
+</defs>
+<path d="M0,260 L0,120 Q100,60 220,110 Q320,150 440,120 Q560,70 700,130 Q820,160 960,110 Q1080,70 1200,120 Q1340,160 1480,100 Q1600,60 1740,120 Q1880,160 2048,110 L2048,260 Z" fill="url(#hill)" stroke="#161621" stroke-width="4" stroke-linejoin="round"/>
+<g fill="#5d659c">
+<path d="M60,128 Q110,96 170,114 Q120,120 90,140 Z"/>
+<path d="M470,126 Q540,92 610,112 Q560,116 520,140 Z"/>
+<path d="M980,118 Q1050,88 1120,104 Q1070,110 1030,132 Z"/>
+<path d="M1500,108 Q1570,76 1650,96 Q1590,100 1550,124 Z"/>
+<path d="M250,150 Q330,150 400,140 Q340,166 280,166 Z"/>
+<path d="M740,156 Q820,170 900,146 Q840,180 780,176 Z"/>
+<path d="M1240,150 Q1330,168 1420,136 Q1350,176 1290,172 Z"/>
+<path d="M1780,150 Q1860,166 1960,136 Q1880,176 1820,170 Z"/>
+</g>
+<path d="M0,214 Q260,196 520,212 Q780,226 1040,208 Q1300,192 1560,210 Q1800,224 2048,206 L2048,260 L0,260 Z" fill="#3b3f63"/>
+</svg>

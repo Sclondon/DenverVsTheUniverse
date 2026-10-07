@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="380" viewBox="0 0 300 380">
+<!-- An action-figure giant robot built from an F-15: twin tails, wings on the back, intakes for shoulders, nozzles for feet -->
+<g stroke="#161621" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
+<path d="M104,120 L14,150 L20,176 L108,160 Z" fill="#7f8b99"/>
+<path d="M196,120 L286,150 L280,176 L192,160 Z" fill="#7f8b99"/>
+<path d="M112,112 L84,16 L108,16 L134,104 Z" fill="#9aa6b4"/>
+<path d="M188,112 L216,16 L192,16 L166,104 Z" fill="#9aa6b4"/>
+<path d="M62,126 L50,214 L70,220 L84,134 Z" fill="#9aa6b4"/>
+<path d="M238,126 L250,214 L230,220 L216,134 Z" fill="#9aa6b4"/>
+<path d="M44,210 H74 L72,262 H46 Z" fill="#5d6875"/>
+<path d="M256,210 H226 L228,262 H254 Z" fill="#5d6875"/>
+<path d="M238,236 H262 V204 H276 V302 H262 V262 H238 Z" fill="#3a404b"/>
+<path d="M116,226 L102,300 L110,344 H142 L140,300 L144,232 Z" fill="#9aa6b4"/>
+<path d="M184,226 L198,300 L190,344 H158 L160,300 L156,232 Z" fill="#9aa6b4"/>
+<path d="M100,340 H146 L152,366 H94 Z" fill="#3a404b"/>
+<path d="M200,340 H154 L148,366 H206 Z" fill="#3a404b"/>
+<path d="M118,184 H182 L188,234 H112 Z" fill="#5d6875"/>
+<path d="M84,104 H216 L200,190 H100 Z" fill="#aab6c4"/>
+<path d="M56,100 H104 L98,148 H60 Z" fill="#7f8b99"/>
+<path d="M244,100 H196 L202,148 H240 Z" fill="#7f8b99"/>
+<path d="M66,108 H96 L93,136 H69 Z" fill="#20242c"/>
+<path d="M234,108 H204 L207,136 H231 Z" fill="#20242c"/>
+<path d="M150,108 Q172,112 170,150 Q160,182 150,188 Q140,182 130,150 Q128,112 150,108 Z" fill="#ffb02e"/>
+<path d="M130,104 L134,76 L150,60 L166,76 L170,104 Z" fill="#aab6c4"/>
+<path d="M136,82 H164 V92 H136 Z" fill="#8be04e" stroke-width="3"/>
+<path d="M150,62 V44" fill="none"/>
+</g>
+<g fill="#20242c" stroke="#161621" stroke-width="3">
+<circle cx="80" cy="126" r="9"/><circle cx="220" cy="126" r="9"/>
+<circle cx="128" cy="236" r="8"/><circle cx="172" cy="236" r="8"/>
+<circle cx="122" cy="300" r="8"/><circle cx="178" cy="300" r="8"/>
+<circle cx="60" cy="214" r="7"/><circle cx="240" cy="214" r="7"/>
+</g>
+<g stroke="#161621" stroke-width="2">
+<circle cx="52" cy="160" r="9" fill="#1f4e9c"/><circle cx="248" cy="160" r="9" fill="#1f4e9c"/>
+</g>
+<path d="M47,160 H57 M52,155 V165 M243,160 H253 M248,155 V165" stroke="#ffffff" stroke-width="3"/>
+<path d="M100,352 H146 M154,352 H200" stroke="#ff8a2a" stroke-width="5"/>
+<path d="M140,122 Q138,144 146,164" fill="none" stroke="#fff3c4" stroke-width="5" stroke-linecap="round"/>
+<path d="M92,22 L104,60 M208,22 L196,60" stroke="#d62839" stroke-width="5" stroke-linecap="round"/>
+<path d="M96,112 L106,180" stroke="#e6ebf2" stroke-width="4" stroke-linecap="round"/>
+</svg>

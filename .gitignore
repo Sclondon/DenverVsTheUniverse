@@ -1,0 +1,7 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# The reference photos are other people's photographs: kept locally for tools/cut_buildings.gd, not published
+conceptart/*.jpg
+conceptart/*.import
