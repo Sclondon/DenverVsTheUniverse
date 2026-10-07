@@ -31,7 +31,14 @@ vec3 shot(vec2 uv, float coarse, mat4 unproject) {
 	float blur = clamp((away - sharp) / (sharp * 1.6), 0.0, 1.0);
 	// The very bottom of the frame is always the near edge of the table
 	blur = max(blur, smoothstep(0.86, 1.0, uv.y) * 0.8) * strength;
-	return textureLod(screen, uv, coarse + blur).rgb;
+	// Out of focus is a ring of taps round the spot, wider the further off it is
+	vec2 r = blur * 3.2 / vec2(textureSize(screen, 0));
+	vec3 col = textureLod(screen, uv, coarse).rgb * 0.28;
+	for (int i = 0; i < 6; i++) {
+		float a = float(i) * 1.0472 + 0.5;
+		col += textureLod(screen, uv + vec2(cos(a), sin(a)) * r * (i % 2 == 0 ? 1.0 : 0.55), coarse).rgb * 0.12;
+	}
+	return col;
 }
 
 // One pixel of the low picture: the scene there, dithered down to the console's colours.
