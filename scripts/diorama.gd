@@ -12,7 +12,7 @@ const BOTTOM := -3.6
 ## The camera looks down on the table from above and a little to the right, like someone leaning over it.
 const PITCH := 0.05
 ## How steeply it looks down once the robot is on the road behind the city, to see over the roofs.
-const PITCH_DEEP := 0.62
+const PITCH_DEEP := 0.26
 ## Half the length of the table and everything on it: the room is dark beyond.
 const EDGE := City.HALF + 4.0
 ## The three mountain boards are painted to read as separate layers: the far range pale and snowy,
@@ -20,6 +20,10 @@ const EDGE := City.HALF + 4.0
 const LAYER_TINT := {"m_far": Color(1.0, 1.0, 1.08), "m_mid": Color(0.5, 0.52, 0.74), "m_near": Color(0.25, 0.27, 0.42)}
 ## Behind the back road the town carries on as rows of houses, as far back as this.
 const SUBURB_BACK := -39.0
+const SUBURB_FRONT := 14.4
+## Where Elitch Gardens stands, and Sloan's Lake (x, z, half length, half width), both behind the back road.
+const ELITCH := Vector3(-21.0, 0.0, -19.6)
+const SLOAN := Vector4(-34.0, -25.5, 7.0, 3.0)
 const YAW := 0.0
 ## Picture quality, best first: lines the 3D view is drawn at (it is stretched to the window, which is
 ## the N64 look and what keeps phones fast), how near a lamp must be to cast shadows, the shadow map
@@ -44,7 +48,7 @@ const SWIVEL := 0.06
 ## The lakes sit this far to one side of the middle of their parks, clear of the shortcut.
 const LAKE_ASIDE := 5.2
 ## The front edge of the table, the spacing of the marquee bulbs along it, and how long a searchlight beam is.
-const TABLE_FRONT := 8.6
+const TABLE_FRONT := 16.6
 const BULB_GAP := 1.1
 const BEAM_LENGTH := 34.0
 
@@ -144,7 +148,7 @@ func _ready() -> void:
 
 	var table := MeshInstance3D.new()
 	var box := BoxMesh.new()
-	box.size = Vector3(EDGE * 2.0, 2.6, 80.6)
+	box.size = Vector3(EDGE * 2.0, 2.6, 88.6)
 	table.mesh = box
 	var ground := _shader("res://shaders/ground.gdshader")
 	for tex: String in ["planks_c", "planks_n", "planks_r", "grass_c", "grass_n", "asphalt_c", "asphalt_n"]:
@@ -156,9 +160,10 @@ func _ready() -> void:
 	ground.set_shader_parameter("bend", Roads.BEND)
 	ground.set_shader_parameter("cut_x", Roads.CUTS[1])
 	ground.set_shader_parameter("lake_aside", LAKE_ASIDE)
+	ground.set_shader_parameter("sloan", SLOAN)
 	ground.set_shader_parameter("parks", Vector2(DISTRICTS[PARKS[0]], DISTRICTS[PARKS[1]]))
 	table.material_override = ground
-	table.position = Vector3(0.0, -1.3, -31.7)
+	table.position = Vector3(0.0, -1.3, -27.7)
 	add_child(table)
 
 	# The range repeats along the back, mirrored each time so the joins match up
@@ -191,7 +196,7 @@ func _ready() -> void:
 	# The parks: plywood trees scattered round the lake, a few this side of the street
 	for park: int in PARKS:
 		for i in 64:
-			var at := Vector3(_rng.randf_range(-9.0, 9.0), 0.0, _rng.randf_range(-14.6, -1.6) if i < 50 else _rng.randf_range(2.2, 7.6))
+			var at := Vector3(_rng.randf_range(-9.0, 9.0), 0.0, _rng.randf_range(-14.6, -1.6) if i < 50 else _rng.randf_range(2.2, 13.0))
 			# Not in the water, nor on the street that cuts through the park
 			if Vector2((at.x - LAKE_ASIDE) / 4.2, (at.z + 6.4) / 2.8).length() < 1.0 or absf(at.x) < 1.6:
 				continue
@@ -203,6 +208,13 @@ func _ready() -> void:
 			add_child(tree)
 
 	_suburbs()
+	# Elitch Gardens, the theme park, on the back road
+	var elitch := Cutout.make("px/elitch", City.PPU, true)
+	elitch.mat.set_shader_parameter("chunk", 5.0)
+	elitch.add_backing()
+	elitch.position = ELITCH
+	elitch.scale = Vector3.ONE * 1.5
+	add_child(elitch)
 
 	# The railway along the back wall: a gravel embankment and a freight train that never stops
 	var bank := MeshInstance3D.new()
@@ -277,9 +289,11 @@ func _ready() -> void:
 		_beams.append(lamp)
 
 	# Hand-painted signs: the neighbourhoods, and the roadside-attraction kind
-	var signs: Array = [[-67.0, 1.0, "ALIEN\nXING", 0.06], [67.0, 1.0, "UFO\nPARKING", -0.05]]
+	var signs: Array = [[-67.0, 1.0, "ALIEN\nXING", 0.06], [67.0, 1.0, "UFO\nPARKING", -0.05],
+			[ELITCH.x + 6.4, Roads.BACK - 1.6, "ELITCH\nGARDENS", 0.04], [SLOAN.x, SLOAN.y + 4.2, "SLOANS\nLAKE", -0.04],
+			[13.0, Roads.BACK - 1.6, "LOHI", 0.05], [2.4, Roads.BACK - 1.6, "UNION\nSTATION", -0.03]]
 	for i in DISTRICTS.size():
-		signs.append([DISTRICTS[i] - (8.8 if i == 3 else 0.0), 7.7, NAMES[i], 0.05 if i % 2 == 0 else -0.04])
+		signs.append([DISTRICTS[i] - (8.8 if i == 3 else 0.0), 15.2, NAMES[i], 0.05 if i % 2 == 0 else -0.04])
 	for s: Array in signs:
 		var post := Cutout.make("sign", Cutout.PPU * 1.15, true)
 		post.position = Vector3(s[0], 0.0, s[1])
@@ -426,6 +440,15 @@ func _ridge(art_name: String, z: float, height: float, copy: int) -> void:
 	add_child(ridge)
 
 
+## True where something bigger stands and no house should: Elitch Gardens, Sloan's Lake, Union Station.
+func _taken(x: float, z: float) -> bool:
+	if absf(x - ELITCH.x) < 5.6 and z < ELITCH.z + 1.6 and z > ELITCH.z - 2.4:
+		return true
+	if Vector2((x - SLOAN.x) / (SLOAN.z + 1.0), (z - SLOAN.y) / (SLOAN.w + 1.0)).length() < 1.0:
+		return true
+	return absf(x - 6.0) < 3.0 and z < Roads.BACK and z > -21.0
+
+
 ## The town behind the back road: rows of houses, churches and schools out to the railway. They are
 ## scenery only (nothing lands on them), so each kind is drawn in one go however many there are.
 func _suburbs() -> void:
@@ -433,15 +456,19 @@ func _suburbs() -> void:
 	var spots: Array = []
 	for i in kinds.size():
 		spots.append([])
-	var z := Roads.BACK - 2.1
-	while z > SUBURB_BACK:
-		var x := -Roads.SIDE + 1.0 + _rng.randf() * 1.5
-		while x < Roads.SIDE - 1.0:
-			var kind := _rng.randi() % kinds.size()
-			var size := _rng.randf_range(0.5, 0.68) * (0.75 if kinds[kind].begins_with("tree") else 1.0)
-			spots[kind].append(Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * size), Vector3(x, 0.0, z + _rng.randf_range(-0.3, 0.3))))
-			x += _rng.randf_range(1.5, 2.8)
-		z -= 2.0
+	# Two bands of it: behind the back road out to the railway, and in front of the last row of
+	# the city out to the edge of the table, so the street runs through the middle of town
+	for band: Array in [[Roads.BACK - 2.1, SUBURB_BACK], [SUBURB_FRONT, 7.7]]:
+		var z: float = band[0]
+		while z > band[1]:
+			var x := -Roads.SIDE + 1.0 + _rng.randf() * 1.5
+			while x < Roads.SIDE - 1.0:
+				var kind := _rng.randi() % kinds.size()
+				var size := _rng.randf_range(0.5, 0.68) * (0.75 if kinds[kind].begins_with("tree") else 1.0)
+				if not _taken(x, z):
+					spots[kind].append(Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * size), Vector3(x, 0.0, z + _rng.randf_range(-0.3, 0.3))))
+				x += _rng.randf_range(1.5, 2.8)
+			z -= 2.0
 	for i in kinds.size():
 		var proto := Cutout.make("px/" + kinds[i], City.PPU, true)
 		proto.mat.set_shader_parameter("chunk", 5.0)

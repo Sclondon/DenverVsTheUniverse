@@ -16,7 +16,7 @@ const LOSS := 0.5
 
 const NAMES := {
 	"cash": "Cash Register", "republic": "Republic Plaza", "c1801": "1801 California", "qwest": "555 17th Street",
-	"fourseasons": "Four Seasons", "b1144": "1144 Fifteenth", "b1999": "1999 Broadway", "b707": "707 17th Street",
+	"civic": "Civic Center", "fourseasons": "Four Seasons", "b1144": "1144 Fifteenth", "b1999": "1999 Broadway", "b707": "707 17th Street",
 	"capitol": "State Capitol", "union": "Union Station", "df": "D&F Tower", "bear": "Convention Center",
 }
 const ART := {
@@ -46,7 +46,9 @@ const LANDMARKS := [
 	["b1999", "b1999", 5.1, -3.5, 544.0],
 	["c1801", "c1801", 7.6, -2.7, 709.0],
 	["df", "df", -9.4, -1.9, 0.0],
-	["union", "union", -5.4, -1.3, 0.0], ["capitol", "capitol", 0.0, -1.3, 0.0], ["bear", "bear", 5.4, -1.3, 0.0],
+	["civic", "civic", -3.6, -1.3, 0.0], ["capitol", "capitol", 0.0, -1.3, 0.0], ["bear", "bear", 5.4, -1.3, 0.0],
+	# Union Station stands on the back road, by LoHi
+	["union", "union", 6.0, -18.5, 0.0],
 ]
 ## Rows of filler, back to front: from x, to x, z, heights to draw from, widest gap, tint.
 const ROWS := [

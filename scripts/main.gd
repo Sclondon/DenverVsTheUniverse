@@ -3,7 +3,7 @@ extends Node3D
 ## This is the referee. It owns the pieces (set, city, swarm, shots, tank, defenses), runs the
 ## wave -> upgrade card -> wave loop, and settles every hit the others report.
 
-enum State { TITLE, PLAYING, CLEARED, PICK, OVER }
+enum State { TITLE, PLAYING, CLEARED, PICK, SHOP, OVER }
 
 const SAVE := "user://best.cfg"
 const WAVE_NAMES := {
@@ -17,6 +17,9 @@ var score := 0
 var best := 0
 ## Upgrade id -> how many times it has been taken this run.
 var levels := {}
+## Alien wreckage to spend in the workshop, and the alien tech built from it so far (id -> true).
+var scrap := 0
+var tech := {}
 var offer: Array = []
 var rng := RandomNumberGenerator.new()
 ## Tests turn this off so they do not write a best score.
@@ -28,8 +31,8 @@ var city: City
 var swarm: Swarm
 var shots: Shots
 var player: Tank
-## The second robot, which steers itself.
-var wingman: Tank
+## The two robots that steer themselves and fight beside the player. They can be destroyed.
+var wingmen: Array[Tank] = []
 var people: People
 var defenses: Defenses
 var fx: Fx
@@ -44,6 +47,7 @@ var _over_t := 0.0
 var _stick_touch := -1
 var _stick_from := Vector2.ZERO
 var _stick := Vector2.ZERO
+var _stick_at := 0
 const STICK_REACH := 64.0
 ## The swiping finger and where it came down; a swipe is this far, in screen pixels.
 var _swipe_touch := -1
@@ -51,7 +55,6 @@ var _swipe_from := Vector2.ZERO
 const SWIPE := 55.0
 ## The push the robot's present run began with, and the way it set off.
 var _ref := Vector2.ZERO
-var _run_dir := Vector2.ZERO
 
 
 func _ready() -> void:
@@ -77,10 +80,13 @@ func _ready() -> void:
 	add_child(player)
 	people = People.new()
 	add_child(people)
-	wingman = Tank.new()
-	wingman.game = self
-	wingman.ai = true
-	add_child(wingman)
+	for side: float in [-1.0, 1.0]:
+		var w := Tank.new()
+		w.game = self
+		w.ai = true
+		w.post = side
+		add_child(w)
+		wingmen.append(w)
 	shots = Shots.new()
 	shots.game = self
 	add_child(shots)
@@ -93,6 +99,9 @@ func _ready() -> void:
 	hud.card_picked.connect(pick_card)
 	hud.again_pressed.connect(start_game)
 	hud.play_pressed.connect(start_game)
+	hud.shop_bought.connect(_buy_shop)
+	hud.tech_bought.connect(_buy_tech)
+	hud.shop_closed.connect(_leave_shop)
 	hud.option_changed.connect(_set_option)
 
 	var cfg := ConfigFile.new()
@@ -114,11 +123,13 @@ func _process(delta: float) -> void:
 		State.TITLE:
 			swarm.update(delta)
 			player.update(delta, false)
-			wingman.update(delta, false)
+			for w in wingmen:
+				w.update(delta, false)
 		State.PLAYING:
 			player.update(delta, true)
-			if wingman.visible:
-				wingman.update(delta, true)
+			for w in wingmen:
+				if w.visible:
+					w.update(delta, true)
 			swarm.update(delta)
 			defenses.update(delta)
 			shots.update(delta)
@@ -133,7 +144,8 @@ func _process(delta: float) -> void:
 				_wave_cleared()
 		State.CLEARED:
 			player.update(delta, false)
-			wingman.update(delta, false)
+			for w in wingmen:
+				w.update(delta, false)
 			defenses.update(delta)
 			shots.update(delta)
 			_clear_t -= delta
@@ -161,11 +173,13 @@ func _unhandled_input(e: InputEvent) -> void:
 			_swipe_touch = -1
 			return
 		if e.pressed:
-			# The left half of the screen is the joystick; anywhere else is for swipes
-			if e.position.x < get_viewport().get_visible_rect().size.x * 0.5 and _stick_touch == -1:
+			# The first finger down, anywhere on the screen, is the joystick. Any finger that
+			# flicks is a swipe, the joystick one included.
+			if _stick_touch == -1:
 				_stick_touch = e.index
 				_stick_from = e.position
 				_stick = Vector2.ZERO
+				_stick_at = Time.get_ticks_msec()
 			elif _swipe_touch == -1:
 				_swipe_touch = e.index
 				_swipe_from = e.position
@@ -181,16 +195,16 @@ func _unhandled_input(e: InputEvent) -> void:
 			_stick_from = e.position - pull.limit_length(STICK_REACH)
 			pull = e.position - _stick_from
 		_stick = pull / STICK_REACH
+		# A quick flick of the joystick finger is a swipe too
+		if Time.get_ticks_msec() - _stick_at < 220 and e.velocity.length() > 1100.0:
+			_stick_at = 0
+			_flick(e.velocity)
 	elif e is InputEventScreenDrag and e.index == _swipe_touch:
 		# A swipe up is a jump, a swipe sideways a dash that way (once their cards are held)
 		var swipe: Vector2 = e.position - _swipe_from
 		if swipe.length() > SWIPE:
 			_swipe_touch = -1
-			if absf(swipe.y) > absf(swipe.x):
-				if swipe.y < 0.0:
-					player.jump()
-			else:
-				player.dash(swipe.x)
+			_flick(swipe)
 	elif e is InputEventKey and e.pressed and not e.echo:
 		match e.keycode:
 			KEY_SPACE, KEY_ENTER:
@@ -210,6 +224,8 @@ func _unhandled_input(e: InputEvent) -> void:
 
 func start_game() -> void:
 	levels = {}
+	scrap = 0
+	tech = {}
 	score = 0
 	wave = 0
 	city.reset()
@@ -227,7 +243,8 @@ func pick_card(index: int) -> void:
 	var u: Dictionary = offer[index]
 	levels[u.id] = int(levels.get(u.id, 0)) + 1
 	player.apply(levels)
-	wingman.enlist(int(levels.get("wingman", 0)))
+	for w in wingmen:
+		w.enlist(int(levels.get("wingman", 0)))
 	match u.id:
 		"repair":
 			city.repair_each(3)
@@ -242,7 +259,9 @@ func pick_card(index: int) -> void:
 			defenses.sync(levels)
 	Sfx.play("pick")
 	hud.hide_cards()
-	_next_wave()
+	# Then the workshop, to spend the wreckage
+	state = State.SHOP
+	hud.show_workshop(scrap, tech)
 
 
 # --- What the other pieces report -------------------------------------------------------------
@@ -260,6 +279,7 @@ func hit_alien(a: Alien, dmg: float, _at: Vector2) -> void:
 		return
 	var at := Vector3(a.pos.x, a.pos.y, 0.0)
 	score += int(a.def.score * (1.0 + 0.25 * (wave - 1)))
+	scrap += ceili(float(a.def.score) / 8.0)
 	fx.burst(at, a.color, 16, 5.0)
 	people.cheer(a.pos.x)
 	Sfx.play("pop", rng.randf_range(0.85, 1.2), -7.0)
@@ -385,6 +405,60 @@ func boss_ray(x: float, y: float) -> void:
 		hurt_building(b, 2, b.roof())
 
 
+# --- The workshop ------------------------------------------------------------------------------
+
+func _buy_shop(id: String) -> void:
+	var item := Workshop.find(Workshop.SHOP, id)
+	if state != State.SHOP or item.is_empty() or scrap < int(item.cost):
+		return
+	match id:
+		"patch":
+			city.repair_each(2)
+		"heart":
+			if player.hearts >= player.max_hearts:
+				return
+			player.hearts += 1
+		"rebuild":
+			var lost: Tank = null
+			for w in wingmen:
+				if w.down:
+					lost = w
+			if lost == null:
+				return
+			lost.down = false
+			lost.hearts = lost.max_hearts
+			lost.x = player.x + 5.0 * lost.post
+			lost.goal_x = lost.x
+			lost.visible = options.wingman == 1
+	scrap -= int(item.cost)
+	Sfx.play("repair")
+	hud.show_workshop(scrap, tech)
+
+
+func _buy_tech(id: String) -> void:
+	var item := Workshop.find(Workshop.TECH, id)
+	var before := Workshop.needs(id)
+	if state != State.SHOP or item.is_empty() or tech.has(id) or scrap < int(item.cost) or (before != "" and not tech.has(before)):
+		return
+	scrap -= int(item.cost)
+	tech[id] = true
+	levels[item.gives] = int(levels.get(item.gives, 0)) + 1
+	player.apply(levels)
+	for w in wingmen:
+		w.enlist(int(levels.get("wingman", 0)))
+	if item.gives in ["armor", "mech"]:
+		player.hearts = player.max_hearts
+	Sfx.play("pick")
+	hud.show_workshop(scrap, tech)
+
+
+func _leave_shop() -> void:
+	if state != State.SHOP:
+		return
+	hud.hide_workshop()
+	_next_wave()
+
+
 # --- Flow ------------------------------------------------------------------------------------
 
 func _next_wave() -> void:
@@ -393,7 +467,11 @@ func _next_wave() -> void:
 	defenses.wave_start()
 	state = State.PLAYING
 	var boss := wave % 5 == 0
-	hud.banner("WAVE %d" % wave, WAVE_NAMES.get(wave, "The Mothership Again" if boss else ""))
+	# Every five waves a new invasion begins
+	if (wave - 1) % 5 == 0:
+		hud.banner(Swarm.invasion(wave).name, "Wave %d" % wave, 2.4)
+	else:
+		hud.banner("WAVE %d" % wave, WAVE_NAMES.get(wave, "The Mothership" if boss else ""))
 	Sfx.play("alarm" if boss else "wave")
 
 
@@ -446,22 +524,52 @@ func _set_option(key: String, value: int) -> void:
 func _apply_options() -> void:
 	Sfx.muted = options.sound == 0
 	diorama.configure(options.picture, options.retro == 1, false)
-	wingman.visible = options.wingman == 1
+	for w in wingmen:
+		w.visible = options.wingman == 1 and not w.down
 
 
-## Stands the wingman beside the robot, as it first arrives.
+## A swipe: up is a jump, sideways a dash that way (once their cards are held).
+func _flick(way: Vector2) -> void:
+	if absf(way.y) > absf(way.x):
+		if way.y < 0.0:
+			player.jump()
+	else:
+		player.dash(way.x)
+
+
+## Stands the wingmen either side of the robot, whole again, as they first arrive.
 func _muster() -> void:
-	wingman.reset()
-	wingman.visible = options.wingman == 1
-	wingman.x = -5.0
-	wingman.goal_x = -5.0
-	wingman.enlist(0)
+	for w in wingmen:
+		w.reset()
+		w.down = false
+		w.visible = options.wingman == 1
+		w.x = 5.0 * w.post
+		w.goal_x = w.x
+		w.enlist(0)
+		w.hearts = w.max_hearts
 
 
-## Turns the joystick (or the arrow keys) into where the robot should run. Pushing sets it off along
-## the street the way pushed, and it then keeps going for as long as the stick is held, round the
-## bends of the ring, without the stick having to follow. Pushing a new way turns it round, or
-## takes it down a shortcut when it reaches one that leads that way.
+## A wingman is hit. Three hits and it is scrap until the next game (or a rebuild from the shop).
+func hurt_wingman(w: Tank) -> void:
+	if w.invuln > 0.0 or w.down or state != State.PLAYING:
+		return
+	w.hearts -= 1
+	w.invuln = 1.2
+	w.flash(1.0)
+	fx.burst(Vector3(w.x, 1.5, 0.0), Color("ffb060"), 14, 5.0)
+	Sfx.play("hurt", 1.3, -6.0)
+	if w.hearts <= 0:
+		w.down = true
+		w.visible = false
+		fx.burst(Vector3(w.x, 2.0, 0.0), Color("ff8a3a"), 40, 7.0)
+		fx.text(Vector3(w.x, 4.0, 0.5), "WINGMAN DOWN!", Color("ff6b6b"), 46)
+		diorama.shake(0.5)
+		Sfx.play("boom")
+
+
+## Turns the joystick (or the arrow keys) into where the robot should run: the way pushed, along
+## whichever street runs that way. Round a bend the push has to follow the street; at a fork the
+## push picks the street.
 func _drive() -> void:
 	var push := _stick
 	var keys := Vector2.ZERO
@@ -479,23 +587,13 @@ func _drive() -> void:
 	if push.length() < 0.3:
 		if _ref != Vector2.ZERO:
 			_ref = Vector2.ZERO
-			_run_dir = Vector2.ZERO
 			player.goal_x = here.x
 			player.goal_z = here.y
 		return
-	# Up the screen is toward the back of the table
-	var intent := push.normalized()
-	if _ref == Vector2.ZERO or absf(intent.angle_to(_ref)) > 1.05:
-		_ref = intent
-		if Roads.ahead(here, intent, 1.0).distance_to(here) > 0.5:
-			_run_dir = intent
-		elif not player.moving():
-			_run_dir = Vector2.ZERO
-	elif player.moving():
-		_run_dir = player.heading_dir()
-	if _run_dir == Vector2.ZERO:
-		return
-	var goal := Roads.ahead(here, _run_dir, 6.0, intent)
+	# Up the screen is toward the back of the table. The robot goes exactly the way pushed, along
+	# whichever street runs that way, and stops where none does.
+	_ref = push
+	var goal := Roads.steer(here, push.normalized())
 	player.goal_x = goal.x
 	player.goal_z = goal.y
 

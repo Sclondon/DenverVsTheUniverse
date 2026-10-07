@@ -173,3 +173,59 @@ static func ahead(from: Vector2, dir: Vector2, reach: float, turn := Vector2.ZER
 		next = onward
 		going = (points[next] - at).normalized()
 	return at
+
+
+## Where a push of the joystick should take a robot standing at `from`: a few steps along whichever
+## street runs the way pushed, choosing at each corner the street that best matches the push and
+## stopping where the streets no longer lead that way. Near a fork whose side street runs the way
+## pushed, it heads for that street. Returns `from` when nothing leads that way.
+static func steer(from: Vector2, push: Vector2, reach := 3.0) -> Vector2:
+	var here := _nearest(from)
+	var at := from
+	var came := -1
+	var next := -1
+	var best := 0.3
+	for end: int in [here[1], here[2]]:
+		var to := points[end] - from
+		if to.length() < NEAR:
+			for other: int in links[end]:
+				var out := (points[other] - points[end]).normalized().dot(push)
+				if out > best:
+					best = out
+					next = other
+					came = end
+			continue
+		var d := to.normalized().dot(push)
+		if d > best:
+			best = d
+			next = end
+			came = here[2] if end == here[1] else here[1]
+	if next == -1:
+		# Nothing along this street: is there a side street close by that goes that way?
+		for end: int in [here[1], here[2]]:
+			if links[end].size() > 2 and points[end].distance_to(from) < 4.0:
+				for other: int in links[end]:
+					var side := (points[other] - points[end]).normalized()
+					if side.dot(push) > 0.7:
+						return points[end] + side * 2.0
+		return from
+	while reach > 0.0:
+		var step := points[next].distance_to(at)
+		if step >= reach:
+			return at + (points[next] - at).normalized() * reach
+		reach -= step
+		at = points[next]
+		var onward := -1
+		var match_best := 0.3
+		for other: int in links[next]:
+			if other == came:
+				continue
+			var way := (points[other] - at).normalized().dot(push)
+			if way > match_best:
+				match_best = way
+				onward = other
+		if onward == -1:
+			return at
+		came = next
+		next = onward
+	return at

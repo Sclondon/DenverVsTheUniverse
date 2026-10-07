@@ -46,8 +46,9 @@ One long table in a dark room, a lamp over each district, the camera leaning ove
 | RiNo | Warehouses in loud paint |
 
 - The table is deep: about twelve rows of city behind the front street, the back road, then rows
-  of suburbs out to the railway and the mountains. Five low rows stand in front of the street,
-  and the camera is low enough that they hide the robots' feet.
+  of suburbs out to the railway and the mountains. In front of the street there are five low rows and then
+  suburbs out to the table edge, so the street runs through the middle of town. The camera is low
+  enough that the front rows hide the robots' feet.
 - The small buildings are houses, townhomes, churches, schools, shops and firehouses, not boxes.
 - Downtown is Denver's eight tallest buildings at their true heights relative to each other
   (Wikipedia's list), in the left-to-right order of the reference photograph: Four Seasons, Wells
@@ -55,6 +56,8 @@ One long table in a dark room, a lamp over each district, the camera leaning ove
   California. Everything else is filler kept well below them.
 - Buildings are thin cardboard slabs cut to the outline of their art. Damage comes in stages:
   grime, scorch marks, holes blown through, then the roof coming down to a stump.
+- Landmarks beyond downtown: Elitch Gardens (wheel, coaster and drop tower), Sloan's Lake, Union
+  Station and LoHi are on the back road; the Civic Center colonnade stands by the Capitol.
 - Mount Blue Sky, as seen from Denver, stands along the back wall, pale and snowy, with a darker
   foothill ridge and a darkest near ridge in front of it so the three read as separate layers. A
   freight train runs on an embankment before them. They do not move.
@@ -91,6 +94,11 @@ canopy on the chest, wings folded down the back, engines for calves.
 Few and large, not a swarm. Each wave is a squad or two of figures marching down Space Invaders
 style over the neighbourhoods nearest the robot; every fifth wave is a mothership that hunts it.
 
+They come as five invasions of five waves each, every one in its own colours with its own ranks
+and kaiju: the Venusians (the classic greys and saucers), the Europans (icy blue, saucers and
+brain Martians, a turtle kaiju), the Titans (orange, tin robots), the Oort Cloud Collective (blue
+crystals) and, from deep space, white winged things with spears. The last invasion goes on for ever.
+
 | Figure | Job |
 | --- | --- |
 | Grey in a silver jumpsuit | The basic invader, drops bombs |
@@ -100,30 +108,42 @@ style over the neighbourhoods nearest the robot; every fifth wave is a mothershi
 | Two-headed one | Splits into two small heads when killed |
 | Tin-toy robot | Slow, very tough |
 | Abduction saucer | Parks over a building and pulls it apart; drops a supply crate |
-| Toy kaiju | Drops onto the street and stomps after the robot, kicking down what it passes |
+| Crystal | A flawless blue eight-sided crystal that fires aimed shots (after Evangelion's Ramiel) |
+| Harrier | White, eyeless, winged, grinning, with a two-bladed spear; dives on the robot (after Evangelion's mass-production units) |
+| Toy kaiju | A wind-up dinosaur or an upright turtle: drops onto the street and stomps after the robot, kicking down what it passes |
 | Mothership | Boss: spreads, divers and a charged death ray |
 
 ## Controls
 
 Phones first.
 
-- **Joystick:** the left half of the screen. Push a direction and the robot sets off along the
-  street that way, then keeps running for as long as the stick is held, round the bends of the
-  ring, without the thumb having to follow. Push a new way to turn round, or to take a shortcut
-  when it reaches one that leads that way. Let go to stop.
-- **Swipes:** anywhere else. Up to jump, sideways to dash, once those cards are held.
+- **Joystick:** the first finger down, anywhere on the screen. The robot goes exactly the way
+  pushed, along whichever street runs that way: round a bend the push has to follow the street,
+  and at a park shortcut pushing up or down takes it. Let go to stop.
+- **Swipes:** a quick flick of any finger. Up to jump, sideways to dash, once those are unlocked.
 - **Aiming** is automatic, at the nearest alien inside the faint ring round the robot.
 - **Keyboard:** arrows or WASD work as the joystick, Space jumps, Shift dashes.
 
 The streets are a ring with rounded corners round the city (front street, both ends, and a road
 behind the last row) with a shortcut across it through each park. On the back road the camera
-climbs to look over the roofs.
+climbs a little to see over the roofs.
 
-## The wingman
+## The wingmen
 
-A second, orange robot that steers itself: it goes and stands under whichever alien the player is
-furthest from and shoots. It cannot be hurt, stays on the front street, and gets better with the
-Wingman Drills card. It can be switched off in the options.
+Two orange robots that steer themselves start every game beside the player, one to each side. Each
+goes and stands under the alien furthest out on its side and shoots. They have three hearts each,
+can be hit by anything that can hit the player, and are gone when those run out, unless rebuilt in
+the workshop. The Wingman Drills card and the Hive Mind tech improve them. They can be switched
+off in the options.
+
+## The workshop
+
+After the card comes the workshop, where the scrap from downed aliens is spent.
+
+- **Shop:** mend the town, mend a heart, rebuild a wingman.
+- **Alien tech:** nine pieces of reverse-engineered alien technology in three lines of three
+  (weapons, movement, protection), each needing the one before it. Each gives a level of an
+  existing upgrade, so tech and cards stack.
 
 ## The menu
 

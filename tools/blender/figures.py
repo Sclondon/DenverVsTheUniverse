@@ -598,10 +598,71 @@ def alien_kaiju():
     return 3.6, 0.0
 
 
+def alien_prism():
+    """The Oort Cloud Collective: a flawless blue crystal, eight faces and nothing else, hanging
+    point down. It does not move so much as arrive."""
+    crystal = mat("2f6bff", 0.04, 0.3, 0.35)
+    loft("crystal", crystal, [(-1.0, 0.0, 0.0), (0.0, 1.0, 1.0), (1.0, 0.0, 0.0)], n=4, sharp=5.0)
+    loft("seam", mat("bfe0ff", 0.1, 0.0, 2.5), [(-0.012, 1.008, 1.008), (0.012, 1.008, 1.008)], n=4, sharp=5.0)
+    ball("heart", mat("ff2d3d", 0.2, 0.0, 3.0), 0.16)
+    return 2.8, 0.0
+
+
+def alien_seraph():
+    """A deep-space harrier: a white, eyeless thing with a long skull, a wide red grin, leathery
+    wings and a two-bladed spear."""
+    white = mat("f2f2ee", 0.45)
+    grey = mat("8a8f98", 0.4, 0.3)
+    red = mat("d0182e", 0.35)
+    humanoid(white, white, grey)
+    head = pivot("head", (0, -0.04, 0.5))
+    loft("skull", white, [(-0.3, 0.1, 0.12), (-0.05, 0.2, 0.22), (0.3, 0.19, 0.2), (0.62, 0.1, 0.12), (0.72, 0.0, 0.0)], n=16, parent=head, rot=(68, 0, 0), subdiv=1, sharp=80)
+    loft("grin", red, [(0.2, 0.17, 0.035, 3.0), (0.56, 0.1, 0.03, 3.0), (0.66, 0.0, 0.0)], n=12, parent=head, loc=(0, -0.02, -0.11), rot=(68, 0, 0))
+    for i in range(6):
+        box("tooth", mat("fff6d8", 0.3), (0.035, 0.03, 0.05), parent=head, loc=((i - 2.5) * 0.05, -0.36 - abs(i - 2.5) * 0.02, -0.02), bevel=0.004)
+    for s, sn in SIDES:
+        wing = pivot("wing_" + sn, (s * 0.12, 0.16, 0.05), rot=(0, s * -18.0, s * 24.0))
+        plate("wing", white, [(0.0, 0.1), (s * 0.5, 0.75), (s * 1.25, 0.95), (s * 1.05, 0.45), (s * 1.3, 0.1), (s * 0.85, -0.05), (s * 0.95, -0.5), (s * 0.45, -0.25), (0.0, -0.3)], 0.03, parent=wing)
+        for i in range(3):
+            loft("wing_bone", grey, [(0.0, 0.02, 0.02), (1.1 - i * 0.2, 0.008, 0.008)], n=6, parent=wing, loc=(0, -0.02, 0.0), rot=(0, s * (38.0 + i * 34.0), 0))
+    spear = pivot("spear", (0.0, -0.06, -0.84), parent=bpy.data.objects["arm_r"], rot=(0, 0, 0))
+    loft("shaft", grey, [(-0.9, 0.022, 0.022), (0.9, 0.022, 0.022)], n=8, parent=spear, rot=(90, 0, 0))
+    for end in (-1.0, 1.0):
+        plate("blade", mat("3a3f4c", 0.25, 0.5), [(-0.07, 0.0), (0.07, 0.0), (0.1, 0.3), (0.0, 0.62), (-0.1, 0.3)], 0.025, parent=spear, loc=(0, -end * 0.9, 0), rot=(90 if end > 0 else -90, 0, 0))
+    return 3.2, 0.0
+
+
+def alien_turtle():
+    """A second toy kaiju: an upright turtle with a studded shell and tusks."""
+    hide = mat("7a9a4a", 0.55)
+    belly = mat("e8d88a", 0.55)
+    shell = mat("6a4a2a", 0.5)
+    loft("body", hide, [(-0.8, 0.3, 0.3), (-0.45, 0.6, 0.52), (0.1, 0.66, 0.54), (0.6, 0.46, 0.4), (0.82, 0.28, 0.26)], n=20, subdiv=1, sharp=80)
+    loft("plastron", belly, [(-0.62, 0.3, 0.1), (-0.25, 0.48, 0.14), (0.3, 0.46, 0.14), (0.62, 0.26, 0.1)], n=16, loc=(0, -0.42, 0), subdiv=1, sharp=80)
+    ball("shell", shell, (0.82, 0.5, 0.95), loc=(0, 0.34, 0.0), subdiv=1)
+    for i in range(7):
+        a = i * 0.9
+        ball("stud", mat("c9a04a", 0.4), 0.11, loc=(math.cos(a) * 0.45, 0.78 - abs(math.cos(a)) * 0.08, math.sin(a) * 0.6))
+    head = pivot("head", (0.0, -0.22, 0.95))
+    loft("skull", hide, [(-0.2, 0.2, 0.2), (0.05, 0.3, 0.32), (0.3, 0.24, 0.26), (0.46, 0.1, 0.12)], n=16, parent=head, subdiv=1, sharp=80)
+    loft("beak", mat("c9a04a", 0.4), [(0.0, 0.2, 0.1, 3.0), (0.3, 0.12, 0.07, 3.0), (0.4, 0.0, 0.0)], n=12, parent=head, loc=(0, -0.12, 0.06), rot=(96, 0, 0))
+    for s, _ in SIDES:
+        loft("tusk", mat("fff6d8", 0.3), [(0.0, 0.04, 0.04), (0.26, 0.0, 0.0)], n=8, parent=head, loc=(s * 0.13, -0.34, -0.02), rot=(20, s * 12.0, 0))
+        ball("eye", mat("ff3d3d", 0.2, 0.0, 2.0), (0.06, 0.04, 0.07), parent=head, loc=(s * 0.17, -0.24, 0.24))
+        arm = pivot("arm_" + ("l" if s < 0 else "r"), (s * 0.6, -0.2, 0.38))
+        loft("flipper", hide, [(0.0, 0.14, 0.1), (-0.32, 0.16, 0.07), (-0.55, 0.08, 0.04)], n=12, parent=arm, rot=(-30, 0, 0))
+        leg = pivot("leg_" + ("l" if s < 0 else "r"), (s * 0.4, 0.0, -0.62))
+        loft("leg", hide, [(0.1, 0.24, 0.26), (-0.45, 0.22, 0.24), (-0.82, 0.26, 0.28)], n=14, parent=leg)
+        loft("foot", shell, [(-0.1, 0.25, 0.1, 3.0), (0.3, 0.27, 0.1, 3.0), (0.42, 0.16, 0.06, 3.0)], n=14, parent=leg, loc=(0, 0.0, -0.8), rot=(90, 0, 0))
+    loft("tail", hide, [(0.0, 0.2, 0.18), (0.5, 0.1, 0.1), (0.8, 0.0, 0.0)], n=12, loc=(0, 0.4, -0.7), rot=(-80, 0, 0))
+    return 3.6, 0.0
+
+
 MODELS = {
     "robot": robot, "alien_grunt": alien_grunt, "alien_spitter": alien_spitter, "alien_crab": alien_crab,
     "alien_saucer": alien_saucer, "alien_diver": alien_diver, "alien_brute": alien_brute,
     "alien_splitter": alien_splitter, "alien_mite": alien_mite, "alien_boss": alien_boss, "alien_kaiju": alien_kaiju,
+    "alien_prism": alien_prism, "alien_seraph": alien_seraph, "alien_turtle": alien_turtle,
 }
 
 

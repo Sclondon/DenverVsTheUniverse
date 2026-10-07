@@ -22,7 +22,7 @@ Godot 4.7, GL Compatibility, built for the web (the Scareathon arcade) and phone
 
 ## Playing
 
-- Run: the left half of the screen is a joystick (arrows or WASD on a keyboard). Hold a direction and the robot keeps running that way round the ring of streets; push another way to turn or to take a park shortcut. See `scripts/roads.gd`.
+- Run: the first finger down is a joystick (arrows or WASD on a keyboard). The robot goes the way pushed along whichever street runs that way; at a park shortcut push up or down to take it. See `scripts/roads.gd`.
 - It aims at the nearest alien inside the faint ring round it and fires on its own. Jump (swipe up, or Space) and Dash (swipe sideways, or Shift) come from cards.
 - Cards: click or tap one, or press 1 / 2 / 3. M mutes.
 - Bombs chew buildings down from the roof; aliens that reach a rooftop or the street crash into it.

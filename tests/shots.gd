@@ -81,6 +81,11 @@ func _run() -> void:
 	await _wait(2.8)
 	await _snap("4_cards")
 	main.pick_card(0)
+	main.scrap = 200
+	main.hud.show_workshop(200, {"ray": true, "lift": true})
+	await _wait(0.4)
+	await _snap("4b_workshop")
+	main.hud.hide_workshop()
 	main.wave = 9
 	main._next_wave()
 	_tough()

@@ -38,7 +38,7 @@ const SPECS := {
 
 
 ## Hand-drawn landmarks that aren't in the photo get the same pixel treatment (art/b_<name>.svg).
-const DRAWN := ["capitol", "union", "df", "bear", "fourseasons", "b1144", "b1999", "house_a", "house_b", "house_c", "townhomes", "church", "school", "shop", "firehouse", "tree_a", "tree_b", "tree_c", "train_loco", "train_car1", "train_car2", "train_car3"]
+const DRAWN := ["capitol", "union", "df", "bear", "fourseasons", "b1144", "b1999", "elitch", "civic", "house_a", "house_b", "house_c", "townhomes", "church", "school", "shop", "firehouse", "tree_a", "tree_b", "tree_c", "train_loco", "train_car1", "train_car2", "train_car3"]
 ## The drawn landmarks' art is this many SVG pixels per world unit.
 const DRAWN_PPU := 94.8
 

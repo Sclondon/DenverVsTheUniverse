@@ -14,6 +14,10 @@ var body: Node3D
 var _mats: Array[StandardMaterial3D] = []
 var _made: Array[Dictionary] = []
 var _flash := 0.0
+## The head's own pose, and which way it is turned from it (yaw, pitch).
+var _head_rest := Basis.IDENTITY
+var _head_found := false
+var _look := Vector2.ZERO
 
 
 ## Loads models/<model>.glb as this figure's body.
@@ -43,6 +47,20 @@ func set_tint(color: Color) -> void:
 		_mats[i].albedo_color = Color(base.r * color.r, base.g * color.g, base.b * color.b, base.a)
 
 
+## Turns the head (on models that have one) to look along `dir`, given in the body's own space with
+## +z straight ahead. It can only turn so far.
+func look(dir: Vector3, delta: float) -> void:
+	var head: Node3D = limbs.get("head")
+	if head == null:
+		return
+	if not _head_found:
+		_head_found = true
+		_head_rest = head.basis
+	var want := Vector2(clampf(atan2(dir.x, maxf(dir.z, 0.05)), -1.1, 1.1), clampf(-asin(clampf(dir.y, -1.0, 1.0)) * 0.7, -0.7, 0.5))
+	_look = _look.lerp(want, 1.0 - exp(-8.0 * delta))
+	head.basis = Basis(Vector3.UP, _look.x) * Basis(Vector3.RIGHT, _look.y) * _head_rest
+
+
 ## Swings the arms and legs as if walking; `phase` is distance covered.
 func stride(phase: float, amount := 0.5) -> void:
 	for side: String in ["l", "r"]:
@@ -63,7 +81,7 @@ func twinkle(time: float) -> void:
 
 
 func _adopt(node: Node, copies: Dictionary) -> void:
-	if String(node.name).get_slice("_", 0) in ["arm", "leg", "knee", "elbow"]:
+	if String(node.name).get_slice("_", 0) in ["arm", "leg", "knee", "elbow", "head"]:
 		limbs[String(node.name)] = node
 	var piece := node as MeshInstance3D
 	if piece != null:

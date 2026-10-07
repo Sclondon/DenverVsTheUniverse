@@ -18,6 +18,15 @@ const RAY_FIRE := 0.6
 
 ## The wave on which each kind first shows up.
 const DEBUTS := {2: "crab", 3: "diver", 4: "spitter", 6: "splitter", 8: "brute"}
+## The five invasions, five waves each (the last goes on for ever): who comes, in what order they
+## join in, what colour their plastic is and which kaiju they drop.
+const INVASIONS := [
+	{"name": "THE VENUSIANS", "tint": "ffffff", "ranks": ["grunt", "crab", "diver", "spitter"], "kaiju": "kaiju"},
+	{"name": "THE EUROPANS", "tint": "8fd8ff", "ranks": ["crab", "spitter", "grunt", "splitter"], "kaiju": "turtle"},
+	{"name": "THE TITANS", "tint": "ffb060", "ranks": ["brute", "grunt", "diver", "splitter"], "kaiju": "kaiju"},
+	{"name": "THE OORT CLOUD COLLECTIVE", "tint": "d0c0ff", "ranks": ["prism", "splitter", "diver", "prism"], "kaiju": "turtle"},
+	{"name": "FROM DEEP SPACE", "tint": "ffffff", "ranks": ["seraph", "prism", "brute", "spitter"], "kaiju": "kaiju"},
+]
 
 
 class Squad:
@@ -63,6 +72,7 @@ func cleared() -> bool:
 func spawn(kind: String, at: Vector2, mode := Alien.Mode.FORM) -> Alien:
 	var a := Alien.new()
 	a.init(kind, hp_scale)
+	a.set_tint(Color(invasion(wave).tint))
 	a.mode = mode
 	a.pos = at
 	a.phase = rng.randf() * TAU
@@ -70,6 +80,11 @@ func spawn(kind: String, at: Vector2, mode := Alien.Mode.FORM) -> Alien:
 	add_child(a)
 	aliens.append(a)
 	return a
+
+
+## Which invasion wave `n` belongs to.
+static func invasion(n: int) -> Dictionary:
+	return INVASIONS[clampi((n - 1) / 5, 0, INVASIONS.size() - 1)]
 
 
 func remove(a: Alien) -> void:
@@ -106,7 +121,7 @@ func spawn_wave(n: int) -> void:
 	# From the fourth wave a toy kaiju drops onto the street as well, two of them later on
 	if n >= 4 and not boss:
 		for i in (1 if n < 9 else 2):
-			var k := spawn("kaiju", Vector2(clampf(near[0] + rng.randf_range(-9.0, 9.0), -City.HALF + 4.0, City.HALF - 4.0), _top + 5.0 + i * 4.0), Alien.Mode.GROUND)
+			var k := spawn(invasion(n).kaiju, Vector2(clampf(near[0] + rng.randf_range(-9.0, 9.0), -City.HALF + 4.0, City.HALF - 4.0), _top + 5.0 + i * 4.0), Alien.Mode.GROUND)
 			k.flip = 1.0
 			k.t = 2.5
 	_grace = 1.6
@@ -132,6 +147,7 @@ func spawn_parade() -> void:
 
 func update(delta: float) -> void:
 	_time += delta
+	Alien.watch_x = game.player.x
 	_grace = maxf(0.0, _grace - delta)
 	var player: Tank = game.player
 	for squad in squads:
@@ -158,7 +174,7 @@ func update(delta: float) -> void:
 			squad.dive_t = rng.randf_range(3.0, 5.5) * maxf(0.5, 1.0 - 0.03 * wave)
 			var divers: Array[Alien] = []
 			for a in form:
-				if a.kind == "diver" and a.flip >= 1.0:
+				if a.def.get("dives", false) and a.flip >= 1.0:
 					divers.append(a)
 			if not divers.is_empty():
 				start_dive(divers[rng.randi() % divers.size()])
@@ -172,7 +188,7 @@ func update(delta: float) -> void:
 				var squad: Squad = a.squad
 				a.pos = squad.origin + a.slot
 				a.tilt = squad.lean * 0.08
-				if a.kind == "spitter" and not peaceful and a.flip >= 1.0:
+				if a.def.get("spits", false) and not peaceful and a.flip >= 1.0:
 					a.t -= delta
 					if a.t <= 0.0:
 						a.t = rng.randf_range(2.5, 4.5)
@@ -233,7 +249,7 @@ func _kaiju(a: Alien, delta: float) -> void:
 	if peaceful:
 		return
 	var player: Tank = game.player
-	a.speed = move_toward(a.speed, 1.2 * signf(player.x - a.pos.x), delta * 2.0)
+	a.speed = move_toward(a.speed, float(a.def.pace) * signf(player.x - a.pos.x), delta * 2.0)
 	a.pos.x = clampf(a.pos.x + a.speed * delta, -City.HALF, City.HALF)
 	a.t -= delta
 	if a.t <= 0.0:
@@ -243,6 +259,9 @@ func _kaiju(a: Alien, delta: float) -> void:
 			game.kaiju_stomp(a, under)
 	if player.z > -2.5 and player.y < 2.0 and absf(player.x - a.pos.x) < a.hx:
 		game.hurt_player()
+	for w: Tank in game.wingmen:
+		if not w.down and absf(w.x - a.pos.x) < a.hx:
+			game.hurt_wingman(w)
 
 
 func start_dive(a: Alien) -> void:
@@ -289,13 +308,11 @@ func lowest() -> Alien:
 ## Kinds for a squad's rows, top first: this wave's debut if it has one, otherwise a mix of what
 ## has been met so far.
 func _row_kinds(n: int) -> Array:
-	var pool := ["grunt"]
-	for debut: int in DEBUTS:
-		if n >= debut:
-			pool.append(DEBUTS[debut])
-	var kinds := []
-	for r in 2:
-		kinds.append(DEBUTS[n] if r == 0 and DEBUTS.has(n) else pool[rng.randi() % pool.size()])
+	# Each wave of an invasion brings in its next rank; the front row is always the newest
+	var ranks: Array = invasion(n).ranks
+	var step := (n - 1) % 5
+	var kinds := [ranks[mini(step, ranks.size() - 1)]]
+	kinds.append(ranks[rng.randi() % mini(step + 1, ranks.size())])
 	return kinds
 
 

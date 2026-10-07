@@ -5,6 +5,10 @@ extends CanvasLayer
 signal card_picked(index: int)
 signal again_pressed
 signal play_pressed
+## The workshop between waves: something was bought, or the player is done there.
+signal shop_bought(id: String)
+signal tech_bought(id: String)
+signal shop_closed
 ## An option on the menu was changed: its name and the index of its new setting.
 signal option_changed(key: String, value: int)
 
@@ -47,6 +51,9 @@ var _menu: HBoxContainer
 var _options: Control
 var _option_rows: Array[Button] = []
 var _settings := {}
+var _shop: Control
+var _scrap: Label
+var _shop_buttons := {}
 var _stick: Array[Panel] = []
 
 
@@ -63,6 +70,7 @@ func _ready() -> void:
 	_build_title()
 	_build_cards()
 	_build_over()
+	_build_workshop()
 
 
 func _process(delta: float) -> void:
@@ -120,6 +128,7 @@ func show_title(best: int) -> void:
 
 func show_game() -> void:
 	_title.visible = false
+	_shop.visible = false
 	_options.visible = false
 	_cards.visible = false
 	_over.visible = false
@@ -307,7 +316,7 @@ func _build_title() -> void:
 	_build_menu()
 	foot.add_child(_menu)
 	foot.add_child(_passive(_gap(8)))
-	foot.add_child(_label("Left thumb: joystick. Hold a direction to keep running round the ring. Swipe up to jump or sideways to dash, once you have the cards.", 20, Color("e6dfc8"), true, HAND))
+	foot.add_child(_label("Touch and push to run the way you push. Flick up to jump or sideways to dash, once unlocked. The robots aim on their own.", 20, Color("e6dfc8"), true, HAND))
 
 
 func _build_cards() -> void:
@@ -548,3 +557,94 @@ func set_options(settings: Dictionary) -> void:
 	_settings = settings
 	for i in OPTIONS.size():
 		_option_rows[i].text = "%s:  %s" % [OPTIONS[i][1], OPTIONS[i][2][int(settings.get(OPTIONS[i][0], 0))]]
+
+
+# --- The workshop: the shop and the alien tech tree ----------------------------------------------
+
+func _build_workshop() -> void:
+	_shop = Control.new()
+	_shop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_shop.visible = false
+	_root.add_child(_shop)
+	var dim := ColorRect.new()
+	dim.color = Color(0.03, 0.03, 0.1, 0.72)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_shop.add_child(dim)
+	var box := VBoxContainer.new()
+	box.set_anchors_preset(Control.PRESET_FULL_RECT)
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_theme_constant_override("separation", 0)
+	_passive(box)
+	_shop.add_child(box)
+	box.add_child(_label("WORKSHOP", 46, GOLD, true, POSTER))
+	_scrap = _label("", 26, Color("9be7f5"))
+	box.add_child(_scrap)
+	var cols := HBoxContainer.new()
+	cols.alignment = BoxContainer.ALIGNMENT_CENTER
+	cols.add_theme_constant_override("separation", 6)
+	_passive(cols)
+	box.add_child(cols)
+	var left := VBoxContainer.new()
+	left.add_theme_constant_override("separation", -10)
+	_passive(left)
+	cols.add_child(left)
+	left.add_child(_label("SHOP", 24))
+	for i in Workshop.SHOP.size():
+		var item: Dictionary = Workshop.SHOP[i]
+		var b := _sign("", CARDBOARD, Vector2(250, 108), 60.0 + i)
+		b.add_theme_font_size_override("font_size", 17)
+		b.get_child(0).material.set_shader_parameter("taped", 0.0)
+		b.pressed.connect(func() -> void: shop_bought.emit(item.id))
+		left.add_child(b)
+		_shop_buttons[item.id] = b
+	var right := VBoxContainer.new()
+	right.add_theme_constant_override("separation", -10)
+	_passive(right)
+	cols.add_child(right)
+	right.add_child(_label("ALIEN TECH", 24))
+	# One column per line of research, read top to bottom
+	var grid := GridContainer.new()
+	grid.columns = 3
+	grid.add_theme_constant_override("h_separation", -8)
+	grid.add_theme_constant_override("v_separation", -10)
+	_passive(grid)
+	right.add_child(grid)
+	for row in 3:
+		for line in 3:
+			var item: Dictionary = Workshop.TECH[line * 3 + row]
+			var b := _sign("", Color("9fd8c8"), Vector2(156, 108), 70.0 + line * 3 + row)
+			b.add_theme_font_size_override("font_size", 15)
+			b.get_child(0).material.set_shader_parameter("taped", 0.0)
+			b.pressed.connect(func() -> void: tech_bought.emit(item.id))
+			grid.add_child(b)
+			_shop_buttons[item.id] = b
+	var go := _sign("NEXT WAVE", Color("f2c94c"), Vector2(300, 84), 90.0)
+	go.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	go.pressed.connect(func() -> void: shop_closed.emit())
+	box.add_child(go)
+
+
+## Shows the workshop. `owned` is the tech already built (id -> true).
+func show_workshop(scrap: int, owned: Dictionary) -> void:
+	_scrap.text = "SCRAP  %d" % scrap
+	for item: Dictionary in Workshop.SHOP:
+		var b: Button = _shop_buttons[item.id]
+		b.text = "%s\n%s\n%d scrap" % [item.name, item.does, item.cost]
+		b.modulate = Color.WHITE if scrap >= int(item.cost) else Color(0.6, 0.6, 0.66)
+	for item: Dictionary in Workshop.TECH:
+		var b: Button = _shop_buttons[item.id]
+		var before := Workshop.needs(item.id)
+		if owned.has(item.id):
+			b.text = "%s\nBUILT" % item.name
+			b.modulate = Color(0.55, 1.0, 0.6)
+		elif before != "" and not owned.has(before):
+			b.text = "%s\nlocked" % item.name
+			b.modulate = Color(0.45, 0.45, 0.52)
+		else:
+			b.text = "%s\n%s\n%d scrap" % [item.name, item.does, item.cost]
+			b.modulate = Color.WHITE if scrap >= int(item.cost) else Color(0.66, 0.66, 0.72)
+	_shop.visible = true
+
+
+func hide_workshop() -> void:
+	_shop.visible = false

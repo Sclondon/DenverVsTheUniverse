@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="620" height="380" viewBox="0 0 620 380">
+<!-- Elitch Gardens: the big wheel, the coaster, the drop tower and a striped tent -->
+<g fill="none" stroke="#f6f3ea" stroke-width="7">
+<path d="M250,370 L250,250 Q300,90 350,250 Q390,330 430,200 Q470,60 520,210 Q560,300 606,290 L606,370"/>
+<path d="M250,300 L606,300"/>
+</g>
+<g stroke="#f6f3ea" stroke-width="4">
+<path d="M270,370 L270,205 M300,370 L300,160 M330,370 L330,210 M360,370 L360,270 M400,370 L400,280 M440,370 L440,180 M470,370 L470,110 M500,370 L500,160 M540,370 L540,260 M580,370 L580,292"/>
+</g>
+<circle cx="130" cy="150" r="118" fill="none" stroke="#ff3d7f" stroke-width="10"/>
+<circle cx="130" cy="150" r="80" fill="none" stroke="#ffd23f" stroke-width="5"/>
+<g stroke="#4fe3ff" stroke-width="5">
+<path d="M130,32 L130,268 M12,150 L248,150 M47,67 L213,233 M213,67 L47,233"/>
+</g>
+<g fill="#ffd23f"><rect x="118" y="20" width="24" height="24"/><rect x="118" y="256" width="24" height="24"/><rect x="0" y="138" width="24" height="24"/><rect x="236" y="138" width="24" height="24"/></g>
+<g fill="#9be33a"><rect x="35" y="55" width="24" height="24"/><rect x="201" y="55" width="24" height="24"/><rect x="35" y="221" width="24" height="24"/><rect x="201" y="221" width="24" height="24"/></g>
+<path d="M130,150 L84,370 L176,370 Z" fill="#b78cff"/>
+<circle cx="130" cy="150" r="16" fill="#ffd23f"/>
+<rect x="196" y="40" width="14" height="330" fill="#4fe3ff"/>
+<rect x="186" y="60" width="34" height="26" fill="#ff8a3a"/>
+<path d="M190,40 L203,10 L216,40 Z" fill="#ff3d7f"/>
+<path d="M12,370 L12,318 L50,286 L88,318 L88,370 Z" fill="#f6f3ea"/>
+<path d="M4,322 L50,278 L96,322 Z" fill="#ff3d7f"/>
+<g fill="#ff3d7f"><rect x="24" y="322" width="12" height="48"/><rect x="48" y="322" width="12" height="48"/><rect x="72" y="322" width="12" height="48"/></g>
+<rect x="250" y="340" width="356" height="30" fill="#2f8f8a"/>
+</svg>

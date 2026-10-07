@@ -12,7 +12,7 @@ uniform sampler2D grass_n : hint_normal, filter_linear_mipmap_anisotropic, repea
 uniform sampler2D asphalt_c : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D asphalt_n : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform vec2 mat_half = vec2(68.5, 0.0);
-uniform vec2 mat_z = vec2(-69.0, 7.9);
+uniform vec2 mat_z = vec2(-69.0, 15.9);
 // Centres of the two parks along the table, and half their length.
 uniform vec2 parks = vec2(-37.7, 37.7);
 uniform float park_half = 9.3;
@@ -25,6 +25,8 @@ uniform float side_x = 65.5;
 uniform float bend = 4.5;
 uniform float cut_x = 37.7;
 uniform float lake_aside = 5.2;
+// Sloan's Lake, behind the back road: x, z, half length, half width.
+uniform vec4 sloan = vec4(-34.0, -25.5, 7.0, 3.0);
 varying vec3 wp;
 varying float top;
 
@@ -60,6 +62,13 @@ void fragment() {
 		col = mix(col, mix(vec3(0.1, 0.3, 0.42), vec3(0.03, 0.1, 0.2), smoothstep(1.0, 0.3, shore)), water);
 		nm = mix(nm, vec3(0.5, 0.5, 1.0), water);
 		rough = mix(rough, 0.04, water);
+		vec2 q2 = (wp.xz - sloan.xy) / sloan.zw;
+		float shore2 = length(q2) + sin(atan(q2.y, q2.x) * 4.0 + 1.0) * 0.05;
+		col = mix(col, vec3(0.7, 0.62, 0.45), smoothstep(1.14, 1.05, shore2));
+		float water2 = smoothstep(1.02, 0.98, shore2);
+		col = mix(col, mix(vec3(0.1, 0.3, 0.42), vec3(0.03, 0.1, 0.2), smoothstep(1.0, 0.3, shore2)), water2);
+		nm = mix(nm, vec3(0.5, 0.5, 1.0), water2);
+		rough = mix(rough, 0.04, water2);
 		// The street, with its kerbs and centre line
 		// The streets: the front one, the one behind the city, the two ends and the shortcut
 		// The ring is a rounded rectangle; the shortcuts cross it through the parks

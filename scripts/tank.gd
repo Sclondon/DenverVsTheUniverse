@@ -29,8 +29,11 @@ var x := 0.0
 ## How far back from the front street it is (Roads): 0 on the front street, negative behind.
 var z := 0.0
 var goal_z := 0.0
-## The wingman: a second robot that steers itself (see _think) and cannot be hurt.
+## A wingman: a robot that steers itself (see _think). `post` is the side of the leader it keeps to,
+## and `down` is true once it has been destroyed.
 var ai := false
+var post := 1.0
+var down := false
 ## Where the driver is steering to; the tank chases it at `speed`.
 var goal_x := 0.0
 var chassis := 0
@@ -79,6 +82,9 @@ var _spin_dir := 1.0
 var _was_facing := 1.0
 var _dir := Vector2.RIGHT
 var _lean_z := 0.0
+## Whether the gun has a target, and how far (0 to 1) the gun arm has dropped to the ready.
+var _locked := false
+var _at_ease := 1.0
 var _bubble: MeshInstance3D
 var _ring: MeshInstance3D
 var _bubble_mat: ShaderMaterial
@@ -241,6 +247,8 @@ func absorb() -> bool:
 
 
 func update(delta: float, firing: bool) -> void:
+	if down:
+		return
 	var here := Vector2(x, z)
 	if ai:
 		_think()
@@ -330,12 +338,13 @@ func _acrobatics(delta: float) -> void:
 	for side: String in ["l", "r"]:
 		var phase := _run + (0.0 if side == "l" else PI)
 		limbs["leg_" + side].rotation = Vector3(sin(phase) * 0.95 * pace, 0.0, 0.0)
-		limbs["knee_" + side].rotation.x = 0.06 + pace * (0.25 + 1.15 * maxf(0.0, -cos(phase)))
+		limbs["knee_" + side].rotation.x = 0.06 + breath * 0.02 + pace * (0.2 + 1.25 * pow(maxf(0.0, -cos(phase)), 1.4))
 	limbs.arm_l.rotation = Vector3(-sin(_run) * 0.9 * pace + breath * 0.03, 0.0, -0.08)
 	limbs.elbow_l.rotation.x = -0.15 - 1.25 * pace
 	# It turns to face the way it is running: side on along a street, its back to us going away
-	var yaw := atan2(_lean, _lean_z + 0.35) * pace
-	var roll := 0.0
+	var yaw := atan2(_lean, _lean_z + 0.35) * pace + sin(_run) * 0.16 * pace
+	# Hips sway and shoulders counter-turn with each stride
+	var roll := sin(_run) * 0.06 * pace
 	var flip := 0.0
 	var lean := 0.24 * pace
 	if _spin_t > 0.0:
@@ -373,10 +382,19 @@ func _acrobatics(delta: float) -> void:
 	# Everything turns about the robot's middle, not its feet
 	var turn := Basis(Vector3.UP, yaw) * Basis(Vector3.BACK, roll) * Basis(Vector3.RIGHT, flip + lean)
 	body.transform = Transform3D(turn, MIDDLE - turn * MIDDLE)
-	# The gun arm points where the gun is aimed whichever way up the robot is
-	_arm_aim = lerp_angle(_arm_aim, _aim, 1.0 - exp(-18.0 * delta))
-	var at := turn.inverse() * Vector3(sin(_arm_aim), cos(_arm_aim), 0.12 * _recoil)
-	limbs.arm_r.basis = Basis(Quaternion(Vector3.UP, at.normalized())) * Basis(Vector3.RIGHT, PI)
+	# The gun arm: elbow bent, forearm and blaster laid along the line of fire whichever way up the
+	# robot is. With nothing to shoot at it comes down to the ready, across the chest.
+	_arm_aim = lerp_angle(_arm_aim, _aim, 1.0 - exp(-14.0 * delta))
+	_at_ease = move_toward(_at_ease, 0.0 if _locked else 1.0, delta * 3.0)
+	var bend := lerpf(0.7, 1.45, _at_ease) + _recoil * 0.4
+	var line := Vector3(sin(_arm_aim), cos(_arm_aim), 0.15).normalized().slerp(Vector3(-0.3, 0.3, 0.9).normalized(), _at_ease)
+	var at := (turn.inverse() * line).normalized()
+	var raised := Basis(Vector3.RIGHT, PI)
+	var forearm := (raised * Basis(Vector3.RIGHT, -bend) * Vector3.DOWN).normalized()
+	limbs.arm_r.basis = Basis(Quaternion(forearm, at)) * raised
+	limbs.elbow_r.rotation.x = -bend
+	# The head turns to watch what it is shooting at
+	look(at, delta)
 
 
 ## Sets the wingman up at this level of the Wingman Drills card (0 = as it first arrives).
@@ -388,22 +406,26 @@ func enlist(level: int) -> void:
 	damage = 1.0 + floorf(level * 0.5)
 	barrels = 2 if level >= 3 else 1
 	aim_range = 14.0 + 2.5 * level
+	max_hearts = 3
 	_ring.visible = false
 
 
-## The wingman's whole mind: go and stand under the alien its leader is furthest from, and never
-## crowd the leader.
+## A wingman's whole mind: hold its side of the leader (`post`: -1 left, 1 right), go and stand
+## under the alien furthest out on that side, and never crowd the leader.
 func _think() -> void:
 	var lead: Tank = game.player
 	var pick: Alien = null
+	var best := -4.0
 	for a: Alien in game.swarm.aliens:
 		if a.dead or a.pos.y > game.diorama.play_top + 1.0:
 			continue
-		if pick == null or absf(a.pos.x - lead.x) > absf(pick.pos.x - lead.x):
+		var out := (a.pos.x - lead.x) * post
+		if out > best:
+			best = out
 			pick = a
-	var want := lead.x - 6.0 * lead.facing if pick == null else pick.pos.x - GUN_X
+	var want := lead.x + post * 7.0 if pick == null else pick.pos.x - GUN_X
 	if absf(want - lead.x) < 3.5 and lead.z > -2.0:
-		want = lead.x + (3.5 if x > lead.x else -3.5)
+		want = lead.x + post * 3.5
 	goal_x = clampf(want, -LIMIT, LIMIT)
 	goal_z = 0.0
 
@@ -425,6 +447,7 @@ func _fire(muzzle: float) -> void:
 	# It shoots at the nearest alien in range, and straight up when there is none
 	var from := Vector2(x + GUN_X, muzzle)
 	var target := _target(from)
+	_locked = target != null
 	_aim = 0.0
 	if target != null:
 		var to := target.pos - from

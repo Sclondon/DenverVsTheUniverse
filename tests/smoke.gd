@@ -73,7 +73,11 @@ func _run() -> void:
 				_check(ids.size() == main.offer.size(), "cards are all different")
 				var before: int = main.wave
 				main.pick_card(main.rng.randi() % main.offer.size())
-				_check(main.wave == before + 1 and main.state == main.State.PLAYING, "picking starts the next wave")
+				_check(main.state == main.State.SHOP, "picking opens the workshop")
+				main._buy_tech(["ray", "lift", "alloy"][main.rng.randi() % 3])
+				main._buy_shop("heart")
+				main._leave_shop()
+				_check(main.wave == before + 1 and main.state == main.State.PLAYING, "leaving the workshop starts the next wave")
 			for a in main.swarm.aliens:
 				seen[a.kind] = true
 			main._process(STEP)

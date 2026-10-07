@@ -50,10 +50,10 @@ func _ready() -> void:
 	for i in COUNT:
 		# Most stand along the front edge of the table like an audience; the rest are out in the parks
 		var x := rng.randf_range(-Roads.SIDE + 5.0, Roads.SIDE - 5.0)
-		var z := rng.randf_range(7.25, 8.15)
+		var z := rng.randf_range(15.0, 16.0)
 		if i % 3 == 0:
 			x = Roads.CUTS[i % 2] + rng.randf_range(-8.0, 8.0)
-			z = rng.randf_range(-4.0, 6.5)
+			z = rng.randf_range(-4.0, 12.0)
 			if absf(z) < 1.4:
 				z = 2.0
 			if absf(x - Roads.CUTS[i % 2]) < 1.5:
