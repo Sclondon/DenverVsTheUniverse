@@ -30,22 +30,28 @@ var shots: Shots
 var player: Tank
 ## The second robot, which steers itself.
 var wingman: Tank
+var people: People
 var defenses: Defenses
 var fx: Fx
 var hud: Hud
 
 ## The menu's options: name -> index of the setting chosen (Hud.OPTIONS lists them).
-var options := {"sound": 1, "picture": 0, "retro": 1, "blur": 1, "wingman": 1}
+var options := {"sound": 1, "picture": 0, "retro": 1, "wingman": 1}
 
 var _clear_t := 0.0
 var _over_t := 0.0
-var _touch := -1
-## Where the steering finger is on the screen: the robot runs to the spot on the street under it.
-var _touch_at := Vector2.ZERO
-## Finger speed, in screen pixels a second, that counts as a flick.
-const SWIPE := 900.0
-var _tap_dir := 0.0
-var _tap_at := 0
+## The joystick: which finger has it, where its middle is on the screen, and how far it is pushed (-1 to 1).
+var _stick_touch := -1
+var _stick_from := Vector2.ZERO
+var _stick := Vector2.ZERO
+const STICK_REACH := 64.0
+## The swiping finger and where it came down; a swipe is this far, in screen pixels.
+var _swipe_touch := -1
+var _swipe_from := Vector2.ZERO
+const SWIPE := 55.0
+## The push the robot's present run began with, and the way it set off.
+var _ref := Vector2.ZERO
+var _run_dir := Vector2.ZERO
 
 
 func _ready() -> void:
@@ -69,6 +75,8 @@ func _ready() -> void:
 	player = Tank.new()
 	player.game = self
 	add_child(player)
+	people = People.new()
+	add_child(people)
 	wingman = Tank.new()
 	wingman.game = self
 	wingman.ai = true
@@ -138,38 +146,51 @@ func _process(delta: float) -> void:
 	if state != State.TITLE:
 		hud.set_stats(score, wave, player.hearts, player.max_hearts, city.percent())
 		_point_at_threats()
-	if _touch != -1 and state in [State.PLAYING, State.CLEARED]:
-		_steer()
-	hud.set_abilities(state == State.PLAYING and player.jump_level > 0, state == State.PLAYING and player.dash_level > 0, player.dash_ready())
+	people.update(delta)
+	if state in [State.PLAYING, State.CLEARED]:
+		_drive()
+	hud.set_stick(_stick_touch != -1, _stick_from, _stick_from + _stick * STICK_REACH)
 	diorama.drama = 1.0 if state == State.TITLE else 0.0
 	diorama.update_camera(delta, player.x, player.heading(), player.z)
 
 
 func _unhandled_input(e: InputEvent) -> void:
 	if e is InputEventScreenTouch:
+		if state != State.PLAYING and state != State.CLEARED:
+			_stick_touch = -1
+			_swipe_touch = -1
+			return
 		if e.pressed:
-			if state == State.TITLE:
-				# The menu's own buttons start the game
-				return
-			# The two ability buttons, once their cards are held
-			var ability := hud.ability_at(e.position) if state == State.PLAYING else ""
-			if ability == "jump":
-				player.jump()
-			elif ability == "dash":
-				player.dash(0.0)
+			# The left half of the screen is the joystick; anywhere else is for swipes
+			if e.position.x < get_viewport().get_visible_rect().size.x * 0.5 and _stick_touch == -1:
+				_stick_touch = e.index
+				_stick_from = e.position
+				_stick = Vector2.ZERO
+			elif _swipe_touch == -1:
+				_swipe_touch = e.index
+				_swipe_from = e.position
+		elif e.index == _stick_touch:
+			_stick_touch = -1
+			_stick = Vector2.ZERO
+		elif e.index == _swipe_touch:
+			_swipe_touch = -1
+	elif e is InputEventScreenDrag and e.index == _stick_touch:
+		var pull: Vector2 = e.position - _stick_from
+		# The stick follows a thumb that wanders off, so it never has to stretch back
+		if pull.length() > STICK_REACH:
+			_stick_from = e.position - pull.limit_length(STICK_REACH)
+			pull = e.position - _stick_from
+		_stick = pull / STICK_REACH
+	elif e is InputEventScreenDrag and e.index == _swipe_touch:
+		# A swipe up is a jump, a swipe sideways a dash that way (once their cards are held)
+		var swipe: Vector2 = e.position - _swipe_from
+		if swipe.length() > SWIPE:
+			_swipe_touch = -1
+			if absf(swipe.y) > absf(swipe.x):
+				if swipe.y < 0.0:
+					player.jump()
 			else:
-				_touch = e.index
-				_touch_at = e.position
-		elif e.index == _touch:
-			# It only runs while a finger is down: letting go stops it where it stands
-			_touch = -1
-			player.goal_x = player.x
-			player.goal_z = player.z
-	elif e is InputEventScreenDrag and e.index == _touch:
-		_touch_at = e.position
-		# A flick upward is a jump too
-		if state == State.PLAYING and e.velocity.y < -SWIPE and absf(e.velocity.y) > absf(e.velocity.x) * 1.5:
-			player.jump()
+				player.dash(swipe.x)
 	elif e is InputEventKey and e.pressed and not e.echo:
 		match e.keycode:
 			KEY_SPACE, KEY_ENTER:
@@ -182,14 +203,6 @@ func _unhandled_input(e: InputEvent) -> void:
 			KEY_SHIFT:
 				if state == State.PLAYING:
 					player.dash(0.0)
-			KEY_LEFT, KEY_A, KEY_RIGHT, KEY_D:
-				# Tapping a direction twice quickly is a dash too
-				var dir := -1.0 if e.keycode in [KEY_LEFT, KEY_A] else 1.0
-				var now := Time.get_ticks_msec()
-				if state == State.PLAYING and dir == _tap_dir and now - _tap_at < 260:
-					player.dash(dir)
-				_tap_dir = dir
-				_tap_at = now
 			KEY_M:
 				_set_option("sound", 1 - int(options.sound))
 				hud.set_options(options)
@@ -248,6 +261,7 @@ func hit_alien(a: Alien, dmg: float, _at: Vector2) -> void:
 	var at := Vector3(a.pos.x, a.pos.y, 0.0)
 	score += int(a.def.score * (1.0 + 0.25 * (wave - 1)))
 	fx.burst(at, a.color, 16, 5.0)
+	people.cheer(a.pos.x)
 	Sfx.play("pop", rng.randf_range(0.85, 1.2), -7.0)
 	match a.kind:
 		"splitter":
@@ -271,11 +285,22 @@ func alien_crashed(a: Alien) -> void:
 	fx.burst(Vector3(a.pos.x, a.pos.y, 0.0), a.color, 12, 4.0)
 	if player.overlaps(a.pos, a.hx):
 		hurt_player()
+	elif defenses.wall_holds():
+		fx.text(Vector3(a.pos.x, 2.0, 0.5), "THE WALL HOLDS", Color("ffd23f"), 40)
 	else:
 		var b := city.nearest_standing(a.pos.x)
 		if b != null and absf(b.x - a.pos.x) < b.half_w + 1.6:
 			hurt_building(b, {"mite": 1, "diver": 2, "brute": 8}.get(a.kind, 4), b.roof())
 	swarm.remove(a)
+
+
+## A kaiju puts its foot through the building it is standing beside.
+func kaiju_stomp(a: Alien, b: City.Building) -> void:
+	diorama.shake(0.3)
+	if defenses.wall_holds():
+		fx.text(Vector3(a.pos.x, 3.4, 0.5), "THE WALL HOLDS", Color("ffd23f"), 40)
+		return
+	hurt_building(b, 2, b.roof())
 
 
 func hurt_player() -> void:
@@ -298,6 +323,7 @@ func hurt_player() -> void:
 func hurt_building(b: City.Building, dmg: int, at: Vector3) -> void:
 	if not b.alive():
 		return
+	people.scare(b.x)
 	if city.damage(b, dmg):
 		fx.burst(Vector3(b.x, 1.0, b.z + 0.2), Color("b9b6ad"), 40, 6.0)
 		if b.title != "":
@@ -374,6 +400,7 @@ func _next_wave() -> void:
 func _wave_cleared() -> void:
 	state = State.CLEARED
 	player.celebrate()
+	people.cheer(player.x, 40.0)
 	_clear_t = 2.0
 	var bonus := 5 * wave * city.percent()
 	score += bonus
@@ -388,7 +415,9 @@ func _wave_cleared() -> void:
 func _game_over() -> void:
 	state = State.OVER
 	_over_t = 0.0
-	_touch = -1
+	_stick_touch = -1
+	_swipe_touch = -1
+	_stick = Vector2.ZERO
 	var reason := "DENVER HAS FALLEN" if city.fallen() else "THE ROBOT IS DOWN"
 	if score > best and saving:
 		best = score
@@ -416,7 +445,7 @@ func _set_option(key: String, value: int) -> void:
 
 func _apply_options() -> void:
 	Sfx.muted = options.sound == 0
-	diorama.configure(options.picture, options.retro == 1, options.blur == 1)
+	diorama.configure(options.picture, options.retro == 1, false)
 	wingman.visible = options.wingman == 1
 
 
@@ -429,22 +458,46 @@ func _muster() -> void:
 	wingman.enlist(0)
 
 
-## Turns where the steering finger is into where the robot should run. Along a street it runs to
-## the spot under the finger. A finger well above or below the robot means the other way: up a
-## street that leads to the back of town (or down one toward the front), where there is one.
-func _steer() -> void:
+## Turns the joystick (or the arrow keys) into where the robot should run. Pushing sets it off along
+## the street the way pushed, and it then keeps going for as long as the stick is held, round the
+## bends of the ring, without the stick having to follow. Pushing a new way turns it round, or
+## takes it down a shortcut when it reaches one that leads that way.
+func _drive() -> void:
+	var push := _stick
+	var keys := Vector2.ZERO
+	if Input.is_key_pressed(KEY_LEFT) or Input.is_key_pressed(KEY_A):
+		keys.x -= 1.0
+	if Input.is_key_pressed(KEY_RIGHT) or Input.is_key_pressed(KEY_D):
+		keys.x += 1.0
+	if Input.is_key_pressed(KEY_UP) or Input.is_key_pressed(KEY_W):
+		keys.y -= 1.0
+	if Input.is_key_pressed(KEY_DOWN) or Input.is_key_pressed(KEY_S):
+		keys.y += 1.0
+	if keys != Vector2.ZERO:
+		push = keys
 	var here := Vector2(player.x, player.z)
-	var view := get_viewport().get_visible_rect().size
-	var off := _touch_at - diorama.camera.unproject_position(Vector3(player.x, 1.6, player.z))
-	if absf(off.y) > view.y * 0.2 and absf(off.y) > absf(off.x) * 1.2:
-		var turn := Roads.snap(here + Vector2(0.0, signf(off.y) * 2.0))
-		if turn.distance_to(here) > 0.3:
-			player.goal_x = turn.x
-			player.goal_z = turn.y
-			return
-	var across := Roads.snap(Vector2(_world_x(_touch_at, player.z), player.z))
-	player.goal_x = across.x
-	player.goal_z = across.y
+	if push.length() < 0.3:
+		if _ref != Vector2.ZERO:
+			_ref = Vector2.ZERO
+			_run_dir = Vector2.ZERO
+			player.goal_x = here.x
+			player.goal_z = here.y
+		return
+	# Up the screen is toward the back of the table
+	var intent := push.normalized()
+	if _ref == Vector2.ZERO or absf(intent.angle_to(_ref)) > 1.05:
+		_ref = intent
+		if Roads.ahead(here, intent, 1.0).distance_to(here) > 0.5:
+			_run_dir = intent
+		elif not player.moving():
+			_run_dir = Vector2.ZERO
+	elif player.moving():
+		_run_dir = player.heading_dir()
+	if _run_dir == Vector2.ZERO:
+		return
+	var goal := Roads.ahead(here, _run_dir, 6.0, intent)
+	player.goal_x = goal.x
+	player.goal_z = goal.y
 
 
 ## The x on the table under a point on the screen, at the depth `z`.

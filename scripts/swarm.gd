@@ -103,6 +103,12 @@ func spawn_wave(n: int) -> void:
 	for d: int in where:
 		var cols := clampi(2 + n / 4, 2, 4) - (1 if where.size() > 2 else 0)
 		_squad(near[d], cols, 1 if n < 7 else 2, _row_kinds(n))
+	# From the fourth wave a toy kaiju drops onto the street as well, two of them later on
+	if n >= 4 and not boss:
+		for i in (1 if n < 9 else 2):
+			var k := spawn("kaiju", Vector2(clampf(near[0] + rng.randf_range(-9.0, 9.0), -City.HALF + 4.0, City.HALF - 4.0), _top + 5.0 + i * 4.0), Alien.Mode.GROUND)
+			k.flip = 1.0
+			k.t = 2.5
 	_grace = 1.6
 	_saucer_t = 10.0
 	if boss:
@@ -194,6 +200,8 @@ func update(delta: float) -> void:
 				if a.pos.y <= 0.6 or player.overlaps(a.pos, a.hx) or game.city.building_at(a.pos.x, a.pos.y) != null:
 					game.alien_crashed(a)
 					continue
+			Alien.Mode.GROUND:
+				_kaiju(a, delta)
 			Alien.Mode.SAUCER:
 				_saucer(a, delta)
 			Alien.Mode.BOSS:
@@ -210,6 +218,31 @@ func update(delta: float) -> void:
 			var s := spawn("saucer", Vector2(from, rng.randf_range(7.5, 9.0)), Alien.Mode.SAUCER)
 			s.flip = 1.0
 			s.t = 1.0
+
+
+## A toy kaiju: it drops out of the sky, then stomps along the street after the robot, kicking down
+## whatever it passes.
+func _kaiju(a: Alien, delta: float) -> void:
+	if a.pos.y > a.hy:
+		a.pos.y = maxf(a.hy, a.pos.y - 10.0 * delta)
+		if a.pos.y == a.hy:
+			game.diorama.shake(0.5)
+			game.people.scare(a.pos.x, 9.0)
+			Sfx.play("boom", 0.7, -4.0)
+		return
+	if peaceful:
+		return
+	var player: Tank = game.player
+	a.speed = move_toward(a.speed, 1.2 * signf(player.x - a.pos.x), delta * 2.0)
+	a.pos.x = clampf(a.pos.x + a.speed * delta, -City.HALF, City.HALF)
+	a.t -= delta
+	if a.t <= 0.0:
+		a.t = 2.2
+		var under: City.Building = game.city.column_at(a.pos.x)
+		if under != null:
+			game.kaiju_stomp(a, under)
+	if player.z > -2.5 and player.y < 2.0 and absf(player.x - a.pos.x) < a.hx:
+		game.hurt_player()
 
 
 func start_dive(a: Alien) -> void:

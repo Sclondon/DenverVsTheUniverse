@@ -62,7 +62,7 @@ func _run() -> void:
 	await _wait(1.5)
 
 	# A mid-run city with most of the defenses up
-	main.levels = {"flak": 3, "blucifer": 2, "dome": 3, "battery": 2, "tesla": 2, "hail": 2, "twin": 2, "chile": 1, "mech": 1, "drone": 2, "rockets": 1, "cow": 1, "watchtower": 1}
+	main.levels = {"flak": 3, "blucifer": 2, "dome": 3, "battery": 2, "tesla": 2, "hail": 2, "twin": 2, "chile": 1, "mech": 1, "drone": 2, "rockets": 1, "cow": 1, "watchtower": 1, "wall": 2, "summit": 1}
 	main.player.apply(main.levels)
 	main.defenses.sync(main.levels)
 	main.wave = 6

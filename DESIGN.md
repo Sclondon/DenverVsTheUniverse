@@ -25,8 +25,8 @@ this in a garage beside the UFO Watchtower outside Alamosa and charges two dolla
 - **Carnival, not sci-fi.** Marquee bulbs chase along the table front, searchlights rake the sky,
   the lettering is a sideshow poster face, and the colours are loud: lime, hot pink, cyan, gold on
   a purple dusk.
-- **A real small thing photographed.** Plank table, scenic turf, resin lakes and spot lamps use real
-  textures and lighting; a tilt-shift lens keeps only the play plane sharp so it reads as a model.
+- **A real small thing.** Plank table, scenic turf, resin lakes and spot lamps use real textures
+  and lighting. (A tilt-shift blur was tried and taken out.)
 - **Seen through an N64.** The whole picture is drawn at under 300 lines in dithered 15-bit colour.
 
 When two of these pull against each other, hand-made wins: a wobbly edge beats a clean one.
@@ -45,23 +45,27 @@ One long table in a dark room, a lamp over each district, the camera leaning ove
 | City Park | Lake, trees |
 | RiNo | Warehouses in loud paint |
 
-- The street is the play line. The city is about ten rows deep behind it and four in front, so
-  the robot runs through the city, not along its edge. Front rows are low so it stays in view.
+- The table is deep: about twelve rows of city behind the front street, the back road, then rows
+  of suburbs out to the railway and the mountains. Five low rows stand in front of the street,
+  and the camera is low enough that they hide the robots' feet.
+- The small buildings are houses, townhomes, churches, schools, shops and firehouses, not boxes.
 - Downtown is Denver's eight tallest buildings at their true heights relative to each other
   (Wikipedia's list), in the left-to-right order of the reference photograph: Four Seasons, Wells
   Fargo "Cash Register", Republic Plaza, 707 17th, 555 17th, 1144 Fifteenth, 1999 Broadway, 1801
   California. Everything else is filler kept well below them.
 - Buildings are thin cardboard slabs cut to the outline of their art. Damage comes in stages:
   grime, scorch marks, holes blown through, then the roof coming down to a stump.
-- Mount Blue Sky, as seen from Denver, stands along the back wall with a freight train running
-  on an embankment in front of it.
+- Mount Blue Sky, as seen from Denver, stands along the back wall, pale and snowy, with a darker
+  foothill ridge and a darkest near ridge in front of it so the three read as separate layers. A
+  freight train runs on an embankment before them. They do not move.
+- The table, backdrop and everything on them stop just past the ends of the city.
 - Building art takes each real tower's outline, faces and colours from a reference photo and
   repaints it as flat-faced pixel art with a drawn window grid. The landmarks that are not in the
   photo (Capitol, Union Station, D&F Tower, the Blue Bear) are drawn by hand and given the same treatment.
 
 ## The camera
 
-- Looks at the table head on from a little above, far enough back to see the front board of the
+- Looks at the table head on and almost level, far enough back to see the front board of the
   table and its bulbs.
 - Almost still in play (a slight drift), with a wide slow orbit on the title screen.
 - Swivels a little toward the way the robot is running.
@@ -82,12 +86,6 @@ canopy on the chest, wings folded down the back, engines for calves.
 - **Refits.** The Strike Eagle Refit card adds hearts, damage and a force field that soaks one hit
   and recharges.
 
-## The wingman
-
-A second, orange robot that steers itself: it goes and stands under whichever alien the player is
-furthest from and shoots. It cannot be hurt, stays on the front street, and gets better with the
-Wingman Drills card. It can be switched off in the options.
-
 ## The aliens
 
 Few and large, not a swarm. Each wave is a squad or two of figures marching down Space Invaders
@@ -102,21 +100,40 @@ style over the neighbourhoods nearest the robot; every fifth wave is a mothershi
 | Two-headed one | Splits into two small heads when killed |
 | Tin-toy robot | Slow, very tough |
 | Abduction saucer | Parks over a building and pulls it apart; drops a supply crate |
+| Toy kaiju | Drops onto the street and stomps after the robot, kicking down what it passes |
 | Mothership | Boss: spreads, divers and a charged death ray |
 
 ## Controls
 
-Phones first. Hold and drag: the robot runs toward your finger and stops the moment you let go.
-The streets make a ring round the city (the front street, both ends and a road behind the last
-row) with a shortcut through the middle of downtown; at a corner, drag well up or down the screen
-(or use Up/Down, W/S) to take the street that runs front to back. On the back road the camera
-climbs to look over the roofs. It aims and fires by itself. Jump and Dash appear as two big cardboard
-buttons at the bottom right once their cards are picked. Keyboard: arrows or A/D to run, Space to jump, Shift to dash.
+Phones first.
+
+- **Joystick:** the left half of the screen. Push a direction and the robot sets off along the
+  street that way, then keeps running for as long as the stick is held, round the bends of the
+  ring, without the thumb having to follow. Push a new way to turn round, or to take a shortcut
+  when it reaches one that leads that way. Let go to stop.
+- **Swipes:** anywhere else. Up to jump, sideways to dash, once those cards are held.
+- **Aiming** is automatic, at the nearest alien inside the faint ring round the robot.
+- **Keyboard:** arrows or WASD work as the joystick, Space jumps, Shift dashes.
+
+The streets are a ring with rounded corners round the city (front street, both ends, and a road
+behind the last row) with a shortcut across it through each park. On the back road the camera
+climbs to look over the roofs.
+
+## The wingman
+
+A second, orange robot that steers itself: it goes and stands under whichever alien the player is
+furthest from and shoots. It cannot be hurt, stays on the front street, and gets better with the
+Wingman Drills card. It can be switched off in the options.
 
 ## The menu
 
 The title screen has PLAY and OPTIONS. Options, remembered between visits: sound, picture (auto,
-sharp or fast), retro filter, lens blur and wingman.
+sharp or fast), retro filter and wingman.
+
+## The townsfolk
+
+Peg people stand along the front edge of the table like an audience, and in the parks. They hop
+on the spot, jump for joy at a kill nearby and run from a building that is hit. Nothing hurts them.
 
 ## The run
 
@@ -124,7 +141,8 @@ sharp or fast), retro filter, lens blur and wingman.
   tougher figures, and after wave 12 health grows faster than any build can keep up with.
 - Bombs chew buildings down from the roof. Aliens that reach a rooftop or the street crash into it.
 - Cards: city defenses (rooftop flak, Blucifer, the Mile High Dome, a missile battery, a Tesla
-  spire, hail, the Blue Bear repair crew, a decoy cow, the UFO Watchtower), robot upgrades (fire
+  spire, hail, the Blue Bear repair crew, a decoy cow, the UFO Watchtower, a wall round the city
+  that stops landings and stomps, a laser on the summit of Mount Blue Sky), robot upgrades (fire
   rate, twin barrels, heavy rounds, piercing, green-chile splash, speed, armour, rockets, drones,
   radar), abilities (dash, jump), and repairs when the city needs them.
 - Score is kills plus a bonus per wave for how much of the city still stands.

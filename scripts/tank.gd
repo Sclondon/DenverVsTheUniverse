@@ -64,7 +64,7 @@ var y := 0.0
 var facing := 1.0
 var _vy := 0.0
 ## How far the gun can pick out a target, and the angle it is turned to (0 = straight up).
-var aim_range := 13.0
+var aim_range := 17.0
 var _aim := 0.0
 var _arm_aim := 0.0
 var _dash_t := 0.0
@@ -80,6 +80,7 @@ var _was_facing := 1.0
 var _dir := Vector2.RIGHT
 var _lean_z := 0.0
 var _bubble: MeshInstance3D
+var _ring: MeshInstance3D
 var _bubble_mat: ShaderMaterial
 var _power := 0.0
 var _pop := 0.0
@@ -102,6 +103,23 @@ func _init() -> void:
 	_bubble.position.y = 1.7
 	_bubble.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(_bubble)
+	# A faint circle showing how far the gun can pick out a target
+	var hoop := TorusMesh.new()
+	hoop.inner_radius = 0.994
+	hoop.outer_radius = 1.006
+	hoop.rings = 96
+	hoop.ring_segments = 4
+	var faint := StandardMaterial3D.new()
+	faint.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	faint.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	faint.albedo_color = Color(0.6, 1.0, 0.45, 0.2)
+	faint.no_depth_test = true
+	hoop.material = faint
+	_ring = MeshInstance3D.new()
+	_ring.mesh = hoop
+	_ring.rotation.x = PI * 0.5
+	_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(_ring)
 
 
 func reset() -> void:
@@ -138,7 +156,7 @@ func apply(levels: Dictionary) -> void:
 	max_hearts = BASE_HEARTS + int(levels.get("armor", 0)) + int(CHASSIS[chassis].hearts)
 	rockets = int(levels.get("rockets", 0))
 	dash_level = int(levels.get("dash", 0))
-	aim_range = 13.0 + 4.0 * int(levels.get("radar", 0))
+	aim_range = 17.0 + 4.0 * int(levels.get("radar", 0))
 	jump_level = int(levels.get("jump", 0))
 	var drones := int(levels.get("drone", 0))
 	while _drones.size() > drones:
@@ -155,7 +173,9 @@ func dash(dir: float) -> void:
 		return
 	_dash_dir = signf(dir) if dir != 0.0 else facing
 	# It dashes on down the street it is on
-	var ahead := Roads.snap(Vector2(x, z) + (Vector2(_dash_dir, 0.0) if dir != 0.0 else _dir) * 9.0)
+	var ahead := Roads.ahead(Vector2(x, z), Vector2(_dash_dir, 0.0) if dir != 0.0 else _dir, 8.0)
+	if ahead.distance_to(Vector2(x, z)) < 0.1:
+		ahead = Roads.ahead(Vector2(x, z), _dir, 8.0)
 	goal_x = ahead.x
 	goal_z = ahead.y
 	_dash_t = DASH_TIME
@@ -191,6 +211,15 @@ func jump() -> void:
 	Sfx.play("missile", 0.8, -8.0)
 
 
+## The way it last ran along the streets, and whether it is running now.
+func heading_dir() -> Vector2:
+	return _dir
+
+
+func moving() -> bool:
+	return absf(_lean) + absf(_lean_z) > 0.15
+
+
 ## Which way it is running and how hard: -1 (flat out left) to 1.
 func heading() -> float:
 	return _lean
@@ -215,21 +244,6 @@ func update(delta: float, firing: bool) -> void:
 	var here := Vector2(x, z)
 	if ai:
 		_think()
-	else:
-		# Keys push it along whichever street it is on; at a corner they pick the street
-		var push := Vector2.ZERO
-		if Input.is_key_pressed(KEY_LEFT) or Input.is_key_pressed(KEY_A):
-			push.x -= 1.0
-		if Input.is_key_pressed(KEY_RIGHT) or Input.is_key_pressed(KEY_D):
-			push.x += 1.0
-		if Input.is_key_pressed(KEY_UP) or Input.is_key_pressed(KEY_W):
-			push.y -= 1.0
-		if Input.is_key_pressed(KEY_DOWN) or Input.is_key_pressed(KEY_S):
-			push.y += 1.0
-		if push != Vector2.ZERO:
-			var want := Roads.snap(here + push * 1.6)
-			goal_x = want.x
-			goal_z = want.y
 	var goal := Roads.snap(Vector2(goal_x, goal_z))
 	goal_x = goal.x
 	goal_z = goal.y
@@ -283,6 +297,8 @@ func update(delta: float, firing: bool) -> void:
 		_drone_t = 0.8
 	_recoil = maxf(0.0, _recoil - delta * 6.0)
 	_acrobatics(delta)
+	_ring.position = Vector3(GUN_X / SIZE, (muzzle + y * 0.0) / SIZE, 0.0)
+	_ring.scale = Vector3.ONE * aim_range / SIZE
 	_pop = maxf(0.0, _pop - delta * 2.5)
 	var shielded: bool = float(CHASSIS[chassis].field) > 0.0 and _field <= 0.0
 	_power = move_toward(_power, 1.0 if shielded else 0.0, delta * 3.0)
@@ -371,7 +387,8 @@ func enlist(level: int) -> void:
 	fire_rate = 1.3 + 0.45 * level
 	damage = 1.0 + floorf(level * 0.5)
 	barrels = 2 if level >= 3 else 1
-	aim_range = 11.0 + 2.5 * level
+	aim_range = 14.0 + 2.5 * level
+	_ring.visible = false
 
 
 ## The wingman's whole mind: go and stand under the alien its leader is furthest from, and never
@@ -397,7 +414,7 @@ func _target(from: Vector2) -> Alien:
 	var best := aim_range
 	for a: Alien in game.swarm.aliens:
 		var d := a.pos.distance_to(from)
-		if not a.dead and a.pos.y > from.y - 2.0 and d < best:
+		if not a.dead and d < best:
 			best = d
 			found = a
 	return found
@@ -411,7 +428,7 @@ func _fire(muzzle: float) -> void:
 	_aim = 0.0
 	if target != null:
 		var to := target.pos - from
-		_aim = clampf(atan2(to.x, to.y), -1.35, 1.35)
+		_aim = clampf(atan2(to.x, to.y), -2.7, 2.7)
 	for i in barrels:
 		var off := (i - (barrels - 1) * 0.5) * 0.34
 		var ang := _aim + off * 0.16

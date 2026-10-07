@@ -16,6 +16,14 @@ const BATTERY_AT := Vector2(-7.6, 2.0)
 var game
 var levels := {}
 var dome_charges := 0
+## Landings and stomps the city wall will still stop this wave.
+var wall_charges := 0
+var _walls: Array[MeshInstance3D] = []
+var _wall_flash := 0.0
+var _summit: Cutout
+var _summit_t := 0.0
+## The top of Mount Blue Sky on the backdrop, where the summit laser sits.
+const SUMMIT := Vector3(-5.9, 14.4, -62.6)
 
 var _turrets: Array[Dictionary] = []
 var _blucifer: Cutout
@@ -47,7 +55,11 @@ func reset() -> void:
 	for t in _turrets:
 		t.node.queue_free()
 	_turrets.clear()
-	for node: Node in [_blucifer, _dome, _battery, _tesla, _hail_cloud, _hail, _cow, _watchtower]:
+	for wall in _walls:
+		wall.queue_free()
+	_walls.clear()
+	wall_charges = 0
+	for node: Node in [_blucifer, _dome, _battery, _tesla, _hail_cloud, _hail, _cow, _watchtower, _summit]:
 		if node != null:
 			node.queue_free()
 	_blucifer = null
@@ -55,6 +67,7 @@ func reset() -> void:
 	_watchtower = null
 	_dome = null
 	_battery = null
+	_summit = null
 	_tesla = null
 	_hail_cloud = null
 	_hail = null
@@ -100,6 +113,14 @@ func sync(new_levels: Dictionary) -> void:
 	if level("hail") > 0 and _hail == null:
 		_build_hail()
 		_hail_t = 5.0
+	if level("wall") > 0:
+		_build_wall()
+	if level("summit") > 0 and _summit == null:
+		_summit = Cutout.make("turret", Cutout.PPU * 0.14, true)
+		_summit.position = SUMMIT
+		add_child(_summit)
+		_pop_in(_summit)
+		_summit_t = 2.0
 	if level("dome") > 0:
 		if _dome == null:
 			_build_dome()
@@ -110,6 +131,7 @@ func sync(new_levels: Dictionary) -> void:
 
 func wave_start() -> void:
 	dome_charges = _dome_max
+	wall_charges = [0, 3, 6, 10][level("wall")]
 	_hail_ticks = 0
 	if _hail != null:
 		_hail.emitting = false
@@ -123,6 +145,49 @@ func wave_end() -> int:
 	_hail_ticks = 0
 	var crew: int = [0, 2, 4, 7][level("bear")]
 	return game.city.repair(crew) if crew > 0 else 0
+
+
+## True if the city wall took a landing or a stomp (and is one hit nearer to giving out).
+func wall_holds() -> bool:
+	if wall_charges <= 0:
+		return false
+	wall_charges -= 1
+	_wall_flash = 1.0
+	return true
+
+
+## The wall: cardboard boards along the city side of the ring, with gaps where the shortcuts cross.
+## Each level makes it taller.
+func _build_wall() -> void:
+	if _walls.is_empty():
+		var card := StandardMaterial3D.new()
+		card.albedo_color = Cutout.CARDBOARD.darkened(0.25)
+		card.roughness = 1.0
+		card.emission_enabled = true
+		card.emission = Cutout.CARDBOARD
+		card.emission_energy_multiplier = 0.08
+		var inset := 1.2
+		var runs: Array = []
+		for z: float in [-inset, Roads.BACK + inset]:
+			var stops: Array = [-Roads.SIDE + Roads.BEND, Roads.CUTS[0], Roads.CUTS[1], Roads.SIDE - Roads.BEND]
+			for i in 3:
+				runs.append([Vector3(stops[i] + inset, 0.0, z), Vector3(stops[i + 1] - inset, 0.0, z)])
+		for x: float in [-Roads.SIDE + inset, Roads.SIDE - inset]:
+			runs.append([Vector3(x, 0.0, -Roads.BEND), Vector3(x, 0.0, Roads.BACK + Roads.BEND)])
+		for run: Array in runs:
+			var board := BoxMesh.new()
+			var span: Vector3 = run[1] - run[0]
+			board.size = Vector3(maxf(absf(span.x), 0.12), 1.0, maxf(absf(span.z), 0.12))
+			board.material = card
+			var wall := MeshInstance3D.new()
+			wall.mesh = board
+			wall.position = (run[0] + run[1]) * 0.5
+			add_child(wall)
+			_walls.append(wall)
+	var tall := 0.3 + 0.16 * level("wall")
+	for wall in _walls:
+		wall.scale.y = tall
+		wall.position.y = tall * 0.5
 
 
 ## True if the dome swallowed an alien shot at `p`.
@@ -159,6 +224,18 @@ func update(delta: float) -> void:
 				t.t = 1.0
 				game.shots.fire("flak", from, (a.pos - from).normalized() * 18.0, 1.0)
 				Sfx.play("flak", _rng.randf_range(0.9, 1.1), -12.0)
+
+	if _summit != null:
+		_summit_t -= delta
+		if _summit_t <= 0.0:
+			var mark := swarm.toughest()
+			if mark != null:
+				_summit_t = [5.0, 5.0, 3.5, 2.0][level("summit")]
+				var hit := Vector3(mark.pos.x, mark.pos.y, 0.0)
+				game.fx.beam(SUMMIT + Vector3(0.0, 1.2, 0.0), hit, Color(0.4, 1.0, 0.9), 0.3, 0.3)
+				game.fx.beam(SUMMIT + Vector3(0.0, 1.2, 0.0), hit, Color.WHITE, 0.1, 0.3)
+				game.hit_alien(mark, 3.0 + 2.0 * level("summit"), mark.pos)
+				Sfx.play("beam", 1.4, -8.0)
 
 	if _blucifer != null:
 		_blucifer_t -= delta

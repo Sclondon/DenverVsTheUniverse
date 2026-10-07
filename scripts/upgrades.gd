@@ -52,12 +52,16 @@ const LIST := [
 		"The robot runs 20% faster.", "Faster again.", "Top speed."]},
 	{"id": "radar", "name": "Targeting Radar", "kind": "tank", "max": 3, "icon": "i_pierce", "desc": [
 		"The gun locks on to aliens from farther away.", "Farther again.", "It can pick them out right across the sky."]},
+	{"id": "wall", "name": "City Wall", "kind": "defense", "max": 3, "icon": "i_dome", "desc": [
+		"A cardboard wall round the city stops 3 landings or kaiju stomps every wave.", "A taller wall: it stops 6.", "The great wall of Denver: it stops 10."]},
+	{"id": "summit", "name": "Summit Laser", "kind": "defense", "max": 3, "icon": "turret", "desc": [
+		"A big gun on top of Mount Blue Sky burns the toughest alien every 5 seconds.", "Every 3.5 seconds, and it burns hotter.", "Every 2 seconds."]},
 	{"id": "wingman", "name": "Wingman Drills", "kind": "tank", "max": 4, "icon": "robot", "desc": [
 		"Your wingman shoots faster and from farther off.", "Faster again, and its darts hit harder.", "Twin barrels for the wingman.", "The wingman at its best: fastest, hardest, farthest."]},
 	{"id": "dash", "name": "Vector Dash", "kind": "tank", "max": 2, "icon": "i_treads", "desc": [
-		"Unlocks the DASH button (or Shift): a cartwheel the way you are running that nothing can hit you during.", "The dash is ready again twice as fast."]},
+		"Swipe sideways (or press Shift) to dash: a cartwheel that nothing can hit you during.", "The dash is ready again twice as fast."]},
 	{"id": "jump", "name": "Vertical Takeoff", "kind": "tank", "max": 2, "icon": "robot", "desc": [
-		"Unlocks the JUMP button (or flick up, or Space): a flipping leap over what is coming.", "Leaps higher, and fires half again as fast in the air."]},
+		"Swipe up (or press Space) to jump: a flipping leap over what is coming.", "Leaps higher, and fires half again as fast in the air."]},
 	{"id": "armor", "name": "Extra Armor", "kind": "tank", "max": 3, "icon": "heart", "desc": [
 		"One more heart, and all hearts refilled.", "One more heart, and all hearts refilled.", "One more heart, and all hearts refilled."]},
 	{"id": "repair", "name": "Emergency Repairs", "kind": "city", "max": 999, "icon": "i_wrench", "desc": [

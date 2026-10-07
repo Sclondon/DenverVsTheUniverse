@@ -3,7 +3,7 @@ extends Figure
 ## One invader: an alien action figure dangling on fishing line. Swarm moves them; this holds what
 ## each kind is and its puppet animation.
 
-enum Mode { FORM, DIVE, FREE, SAUCER, BOSS }
+enum Mode { FORM, DIVE, FREE, SAUCER, BOSS, GROUND }
 
 ## bomb: chance to actually drop when the swarm picks this alien. hx/hy: half-size of the hit box.
 ## The models are models/alien_<kind>.glb. These are few and large, more kaiju than swarm.
@@ -16,6 +16,7 @@ const TYPES := {
 	"splitter": {"hp": 8, "score": 120, "hx": 0.85, "hy": 0.65, "bomb": 0.5, "color": "b9bfca"},
 	"mite": {"hp": 2, "score": 20, "hx": 0.4, "hy": 0.4, "bomb": 0.0, "color": "b9bfca"},
 	"saucer": {"hp": 12, "score": 240, "hx": 1.05, "hy": 0.5, "bomb": 0.0, "color": "c9cfd6"},
+	"kaiju": {"hp": 26, "score": 350, "hx": 1.2, "hy": 1.5, "bomb": 0.0, "color": "5fbf4a"},
 	"boss": {"hp": 110, "score": 2000, "hx": 2.7, "hy": 1.0, "bomb": 0.0, "color": "c9cfd6"},
 }
 
@@ -65,7 +66,8 @@ func init(alien_kind: String, hp_scale: float) -> void:
 	hy = def.hy
 	color = Color(def.color)
 	rotation.y = PI * 0.5
-	if kind != "mite":
+	# Everything hangs from fishing line except the mites and the kaiju, which walks
+	if kind != "mite" and kind != "kaiju":
 		_add_line()
 	if kind == "saucer":
 		_add_beam()
@@ -84,6 +86,9 @@ func animate(delta: float) -> void:
 	elif flip < 1.0:
 		flip = minf(1.0, flip + delta * 3.5)
 	rotation.y = (1.0 - flip) * PI * 0.5
+	if mode == Mode.GROUND:
+		# It turns to face the way it is stomping
+		rotation.y = clampf(speed, -1.0, 1.0) * 1.15
 	rotation.z = lerp_angle(rotation.z, tilt, 1.0 - exp(-14.0 * delta))
 	position = Vector3(pos.x, pos.y, 0.0)
 	# Limbs dangle and swing as it is jerked along its line

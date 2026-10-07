@@ -22,7 +22,7 @@ const NAMES := {
 const ART := {
 	"tall": ["gold_a", "gold_b", "mid_a", "mid_b", "mid_c", "ribbed", "dark"],
 	"mid": ["qwest", "orange", "gold_a", "gold_b", "mid_a", "mid_b", "mid_c", "ribbed", "dark"],
-	"low": ["pink_low", "low_wide", "low_a", "low_b", "low_c", "low_d"],
+	"low": ["house_a", "house_b", "house_c", "townhomes", "church", "school", "shop", "firehouse", "house_a", "townhomes", "low_wide", "pink_low", "low_a"],
 }
 ## How big each height of building is made: towers loom, the low-rise is small.
 const SIZES := {"tall": 1.5, "mid": 1.0, "low": 0.62}
@@ -30,23 +30,23 @@ const SIZES := {"tall": 1.5, "mid": 1.0, "low": 0.62}
 const MAX_HEIGHT := 4.9
 ## World units a foot of real building is built to: Republic Plaza (714 ft) comes out 8 units tall.
 const FOOT := 8.0 / 714.0
-## Half the width kept clear for the street that cuts through the middle of downtown.
-const SHORTCUT := 0.85
+## How far from the middle of a street nothing may be built.
+const STREET := 1.25
 ## Denver's eight tallest buildings, at their true heights relative to each other (feet, from
 ## Wikipedia's list of tallest buildings in Denver) and in the left-to-right order of the skyline
 ## photograph in conceptart/. Four Seasons and 1144 Fifteenth were built after that photograph, so
 ## where they stand is a guess. Then the low landmarks along the street. id, art, x, z, feet (0 = as drawn).
 const LANDMARKS := [
-	["fourseasons", "fourseasons", -9.0, -3.3, 639.0],
-	["cash", "cash", -6.5, -2.6, 698.0],
-	["republic", "republic", -3.2, -3.4, 714.0],
-	["b707", "orange", 2.7, -2.6, 522.0],
-	["qwest", "qwest", 4.7, -3.5, 507.0],
-	["b1144", "b1144", 6.4, -2.5, 602.0],
-	["b1999", "b1999", 8.1, -3.5, 544.0],
-	["c1801", "c1801", 10.6, -2.7, 709.0],
-	["df", "df", -10.8, -1.9, 0.0],
-	["union", "union", -6.0, -1.2, 0.0], ["capitol", "capitol", -2.8, -1.2, 0.0], ["bear", "bear", 5.4, -1.2, 0.0],
+	["fourseasons", "fourseasons", -7.6, -3.3, 639.0],
+	["cash", "cash", -5.3, -2.6, 698.0],
+	["republic", "republic", -2.5, -3.4, 714.0],
+	["b707", "orange", -0.3, -2.6, 522.0],
+	["qwest", "qwest", 1.6, -3.5, 507.0],
+	["b1144", "b1144", 3.3, -2.5, 602.0],
+	["b1999", "b1999", 5.1, -3.5, 544.0],
+	["c1801", "c1801", 7.6, -2.7, 709.0],
+	["df", "df", -9.4, -1.9, 0.0],
+	["union", "union", -5.4, -1.3, 0.0], ["capitol", "capitol", 0.0, -1.3, 0.0], ["bear", "bear", 5.4, -1.3, 0.0],
 ]
 ## Rows of filler, back to front: from x, to x, z, heights to draw from, widest gap, tint.
 const ROWS := [
@@ -150,11 +150,11 @@ func _ready() -> void:
 			var kinds: Array = ART[kind]
 			var b := _add(kinds[rng.randi() % kinds.size()], 0.0, row[2] + rng.randf_range(-0.12, 0.12), "", rng.randf() < 0.5, SIZES[kind] * rng.randf_range(0.88, 1.12))
 			b.x = x + b.half_w
-			# Nothing is built on the shortcut through the middle of town
-			if row[2] < 0.0 and absf(b.x) < b.half_w + SHORTCUT:
+			# Nothing is built on a street
+			if minf(Roads.clearance(Vector2(b.x, b.z)), minf(Roads.clearance(Vector2(b.x - b.half_w, b.z)), Roads.clearance(Vector2(b.x + b.half_w, b.z)))) < STREET:
 				buildings.pop_back()
 				b.node.queue_free()
-				x = SHORTCUT
+				x += b.half_w * 2.0
 				continue
 			b.node.position.x = b.x
 			b.node.set_tint(Color(row[5]))

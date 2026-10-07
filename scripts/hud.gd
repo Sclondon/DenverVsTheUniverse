@@ -47,7 +47,7 @@ var _menu: HBoxContainer
 var _options: Control
 var _option_rows: Array[Button] = []
 var _settings := {}
-var _abilities: Array[ColorRect] = []
+var _stick: Array[Panel] = []
 
 
 func _ready() -> void:
@@ -307,7 +307,7 @@ func _build_title() -> void:
 	_build_menu()
 	foot.add_child(_menu)
 	foot.add_child(_passive(_gap(8)))
-	foot.add_child(_label("Hold and drag to run; drag up or down at a corner to take the other street. The robots aim and fire on their own.", 20, Color("e6dfc8"), true, HAND))
+	foot.add_child(_label("Left thumb: joystick. Hold a direction to keep running round the ring. Swipe up to jump or sideways to dash, once you have the cards.", 20, Color("e6dfc8"), true, HAND))
 
 
 func _build_cards() -> void:
@@ -432,47 +432,25 @@ func _build_over() -> void:
 	box.add_child(again)
 
 
-## The two ability buttons at the bottom right, shown once their cards are held. They are not real
-## buttons: Main asks `ability_at` about each new touch, so a thumb can steer and tap at once.
-func set_abilities(jump: bool, dash: bool, dash_ready: bool) -> void:
-	if _abilities.is_empty():
+## The joystick: a ring where the thumb came down and a knob under the thumb.
+func set_stick(shown: bool, middle: Vector2, thumb: Vector2) -> void:
+	if _stick.is_empty():
 		for i in 2:
-			var pad := ColorRect.new()
-			pad.anchor_left = 1.0
-			pad.anchor_right = 1.0
-			pad.anchor_top = 1.0
-			pad.anchor_bottom = 1.0
-			pad.offset_left = -150.0 - i * 140.0
-			pad.offset_right = pad.offset_left + 136.0
-			pad.offset_top = -150.0 - i * 26.0
-			pad.offset_bottom = pad.offset_top + 136.0
-			var m := ShaderMaterial.new()
-			m.shader = CRAFT
-			m.set_shader_parameter("base", [Color("8fd94a"), Color("ff8a3a")][i])
-			m.set_shader_parameter("seed", 20.0 + i)
-			m.set_shader_parameter("size", Vector2(136, 136))
-			m.set_shader_parameter("taped", 0.0)
-			pad.material = m
-			_passive(pad)
-			var word := _label(["JUMP", "DASH"][i], 30, INK, false)
-			word.set_anchors_preset(Control.PRESET_FULL_RECT)
-			word.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-			word.rotation = [-0.06, 0.05][i]
-			word.pivot_offset = Vector2(68, 68)
-			pad.add_child(word)
-			_root.add_child(pad)
-			_abilities.append(pad)
-	_abilities[0].visible = jump
-	_abilities[1].visible = dash
-	_abilities[1].color = Color.WHITE if dash_ready else Color(0.55, 0.55, 0.6)
-
-
-## Which ability button, if any, is under this point on the screen: "jump", "dash" or "".
-func ability_at(point: Vector2) -> String:
-	for i in _abilities.size():
-		if _abilities[i].visible and _abilities[i].get_global_rect().grow(10.0).has_point(point):
-			return ["jump", "dash"][i]
-	return ""
+			var disc := Panel.new()
+			var look := StyleBoxFlat.new()
+			look.bg_color = Color(0.96, 0.95, 0.9, 0.1 if i == 0 else 0.55)
+			look.border_color = Color(0.96, 0.95, 0.9, 0.5)
+			look.set_border_width_all(3 if i == 0 else 0)
+			look.set_corner_radius_all(200)
+			disc.add_theme_stylebox_override("panel", look)
+			disc.size = Vector2.ONE * (150.0 if i == 0 else 60.0)
+			_passive(disc)
+			_root.add_child(disc)
+			_stick.append(disc)
+	_stick[0].visible = shown
+	_stick[1].visible = shown
+	_stick[0].position = middle - _stick[0].size * 0.5
+	_stick[1].position = thumb - _stick[1].size * 0.5
 
 
 ## Arrows at the screen edges for aliens that are off to the left or right.
@@ -503,7 +481,6 @@ const OPTIONS := [
 	["sound", "SOUND", ["OFF", "ON"]],
 	["picture", "PICTURE", ["AUTO", "SHARP", "FAST"]],
 	["retro", "RETRO FILTER", ["OFF", "ON"]],
-	["blur", "LENS BLUR", ["OFF", "ON"]],
 	["wingman", "WINGMAN", ["OFF", "ON"]],
 ]
 

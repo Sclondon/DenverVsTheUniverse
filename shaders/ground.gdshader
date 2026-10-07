@@ -12,14 +12,19 @@ uniform sampler2D grass_n : hint_normal, filter_linear_mipmap_anisotropic, repea
 uniform sampler2D asphalt_c : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform sampler2D asphalt_n : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform vec2 mat_half = vec2(68.5, 0.0);
-uniform vec2 mat_z = vec2(-28.6, 7.9);
+uniform vec2 mat_z = vec2(-69.0, 7.9);
 // Centres of the two parks along the table, and half their length.
 uniform vec2 parks = vec2(-37.7, 37.7);
 uniform float park_half = 9.3;
-uniform vec3 lake = vec3(-6.4, 5.6, 2.3);
+uniform vec3 lake = vec3(-6.4, 3.6, 2.2);
 // Where the road behind the city and the two end roads run (Roads.BACK, Roads.SIDE).
 uniform float back_z = -16.3;
 uniform float side_x = 65.5;
+// How tight the corners of the ring are, how far from the middle the park shortcuts cross, and how
+// far the lakes sit to one side of them.
+uniform float bend = 4.5;
+uniform float cut_x = 37.7;
+uniform float lake_aside = 5.2;
 varying vec3 wp;
 varying float top;
 
@@ -47,7 +52,8 @@ void fragment() {
 		nm = texture(grass_n, guv).rgb;
 		rough = 0.95;
 		// The lake: poured resin with a sandy shore
-		vec2 q = vec2(px, wp.z - lake.x) / lake.yz;
+		float lx = min(abs(wp.x - parks.x - lake_aside), abs(wp.x - parks.y - lake_aside));
+		vec2 q = vec2(lx, wp.z - lake.x) / lake.yz;
 		float shore = length(q) + sin(atan(q.y, q.x) * 5.0 + wp.x) * 0.06;
 		col = mix(col, vec3(0.7, 0.62, 0.45), smoothstep(1.16, 1.06, shore));
 		float water = smoothstep(1.02, 0.98, shore);
@@ -56,11 +62,12 @@ void fragment() {
 		rough = mix(rough, 0.04, water);
 		// The street, with its kerbs and centre line
 		// The streets: the front one, the one behind the city, the two ends and the shortcut
-		float way = min(abs(wp.z), abs(wp.z - back_z));
+		// The ring is a rounded rectangle; the shortcuts cross it through the parks
+		vec2 ring = abs(vec2(wp.x, wp.z - back_z * 0.5)) - (vec2(side_x, -back_z * 0.5) - bend);
+		float way = abs(length(max(ring, 0.0)) + min(max(ring.x, ring.y), 0.0) - bend);
 		if (wp.z < 0.0 && wp.z > back_z) {
-			way = min(way, min(abs(abs(wp.x) - side_x), abs(wp.x) + 0.2));
+			way = min(way, abs(abs(wp.x) - cut_x) + 0.15);
 		}
-		way += step(side_x + 1.05, abs(wp.x)) * 9.0;
 		float road = step(way, 1.05);
 		vec2 auv = wp.xz * 0.3;
 		vec3 asphalt = texture(asphalt_c, auv).rgb * 0.55;

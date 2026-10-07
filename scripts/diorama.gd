@@ -10,14 +10,16 @@ const BOX_W := 22.0
 const BOX_H := 19.0
 const BOTTOM := -3.6
 ## The camera looks down on the table from above and a little to the right, like someone leaning over it.
-const PITCH := 0.13
+const PITCH := 0.05
 ## How steeply it looks down once the robot is on the road behind the city, to see over the roofs.
 const PITCH_DEEP := 0.62
 ## Half the length of the table and everything on it: the room is dark beyond.
 const EDGE := City.HALF + 4.0
-## How far each mountain layer slides with the camera, as a share of its travel: far ones more, so
-## the range seems to hang back as the robot runs.
-const PARALLAX := {"m_far": 0.34, "m_mid": 0.2, "m_near": 0.09}
+## The three mountain boards are painted to read as separate layers: the far range pale and snowy,
+## the foothills in front of it darker, the nearest ridge darkest.
+const LAYER_TINT := {"m_far": Color(1.0, 1.0, 1.08), "m_mid": Color(0.5, 0.52, 0.74), "m_near": Color(0.25, 0.27, 0.42)}
+## Behind the back road the town carries on as rows of houses, as far back as this.
+const SUBURB_BACK := -39.0
 const YAW := 0.0
 ## Picture quality, best first: lines the 3D view is drawn at (it is stretched to the window, which is
 ## the N64 look and what keeps phones fast), how near a lamp must be to cast shadows, the shadow map
@@ -34,15 +36,17 @@ const NAMES := ["CHERRY\nCREEK", "WASH\nPARK", "CAP\nHILL", "DOWN\nTOWN", "LODO"
 const PARKS := [1, 5]
 const TOWNS := [-56.6, -18.9, 0.0, 18.9, 56.6]
 ## The railway embankment along the back wall: where it is and how high the train rides.
-const TRACK_Z := -17.6
-const TRACK_Y := 2.1
+const TRACK_Z := -43.0
+const TRACK_Y := 2.8
 const TRAIN_SPEED := 2.6
 ## How far the camera turns to look the way the robot is running.
 const SWIVEL := 0.06
+## The lakes sit this far to one side of the middle of their parks, clear of the shortcut.
+const LAKE_ASIDE := 5.2
 ## The front edge of the table, the spacing of the marquee bulbs along it, and how long a searchlight beam is.
 const TABLE_FRONT := 8.6
 const BULB_GAP := 1.1
-const BEAM_LENGTH := 22.0
+const BEAM_LENGTH := 34.0
 
 var font: Font
 var camera: Camera3D
@@ -65,8 +69,6 @@ var drama := 0.0
 var _drama := 1.0
 var _time := 0.0
 var _beams: Array[Node3D] = []
-## The mountain boards: each with where it stands and how far it slides with the camera.
-var _ridges: Array = []
 var _deep := 0.0
 var quality := 0
 ## The menu's picture options: whether quality may step down by itself, whether the picture is drawn
@@ -130,19 +132,19 @@ func _ready() -> void:
 
 	var board := MeshInstance3D.new()
 	var board_quad := QuadMesh.new()
-	board_quad.size = Vector2(EDGE * 2.0, 50.0)
+	board_quad.size = Vector2(EDGE * 2.0, 80.0)
 	board.mesh = board_quad
 	var paint := _shader("res://shaders/sky.gdshader")
-	paint.set_shader_parameter("cells", Vector2(280.0, 100.0))
-	paint.set_shader_parameter("horizon", 0.04)
+	paint.set_shader_parameter("cells", Vector2(280.0, 160.0))
+	paint.set_shader_parameter("horizon", 0.03)
 	paint.set_shader_parameter("height", 0.5)
 	board.material_override = paint
-	board.position = Vector3(0.0, 25.0, -30.5)
+	board.position = Vector3(0.0, 40.0, -70.5)
 	add_child(board)
 
 	var table := MeshInstance3D.new()
 	var box := BoxMesh.new()
-	box.size = Vector3(EDGE * 2.0, 2.6, 39.6)
+	box.size = Vector3(EDGE * 2.0, 2.6, 80.6)
 	table.mesh = box
 	var ground := _shader("res://shaders/ground.gdshader")
 	for tex: String in ["planks_c", "planks_n", "planks_r", "grass_c", "grass_n", "asphalt_c", "asphalt_n"]:
@@ -151,26 +153,29 @@ func _ready() -> void:
 	ground.set_shader_parameter("mat_half", Vector2(City.HALF + 2.5, 0.0))
 	ground.set_shader_parameter("back_z", Roads.BACK)
 	ground.set_shader_parameter("side_x", Roads.SIDE)
+	ground.set_shader_parameter("bend", Roads.BEND)
+	ground.set_shader_parameter("cut_x", Roads.CUTS[1])
+	ground.set_shader_parameter("lake_aside", LAKE_ASIDE)
 	ground.set_shader_parameter("parks", Vector2(DISTRICTS[PARKS[0]], DISTRICTS[PARKS[1]]))
 	table.material_override = ground
-	table.position = Vector3(0.0, -1.3, -11.2)
+	table.position = Vector3(0.0, -1.3, -31.7)
 	add_child(table)
 
 	# The range repeats along the back, mirrored each time so the joins match up
 	for copy: int in [-1, 0, 1]:
-		_ridge("m_far", -28.0, 13.5, copy)
-		_ridge("m_mid", -25.5, 7.6, copy)
-		_ridge("m_near", -23.0, 4.4, copy)
+		_ridge("m_far", -63.0, 18.0, copy)
+		_ridge("m_mid", -57.0, 10.0, copy)
+		_ridge("m_near", -51.5, 5.6, copy)
 
 	var moon := Cutout.make("moon")
-	moon.position = Vector3(-6.4, 17.0, -29.5)
-	moon.scale = Vector3.ONE * 1.5
+	moon.position = Vector3(-16.4, 27.0, -69.5)
+	moon.scale = Vector3.ONE * 3.0
 	_hang(moon)
 	add_child(moon)
 	for i in 14:
 		var cloud := Cutout.make("cloud")
-		cloud.position = Vector3(-EDGE + 4.0 + i * 10.0 + _rng.randf_range(-3.0, 3.0), _rng.randf_range(12.0, 16.0), _rng.randf_range(-24.0, -20.0))
-		cloud.scale = Vector3.ONE * _rng.randf_range(0.9, 1.5)
+		cloud.position = Vector3(-EDGE + 4.0 + i * 10.0 + _rng.randf_range(-3.0, 3.0), _rng.randf_range(18.0, 25.0), _rng.randf_range(-50.0, -45.0))
+		cloud.scale = Vector3.ONE * _rng.randf_range(1.8, 3.0)
 		cloud.set_tint(Color(0.95, 0.8, 0.9))
 		_hang(cloud)
 		add_child(cloud)
@@ -187,8 +192,8 @@ func _ready() -> void:
 	for park: int in PARKS:
 		for i in 64:
 			var at := Vector3(_rng.randf_range(-9.0, 9.0), 0.0, _rng.randf_range(-14.6, -1.6) if i < 50 else _rng.randf_range(2.2, 7.6))
-			# Not in the water
-			if Vector2(at.x / 6.4, (at.z + 6.4) / 3.0).length() < 1.0:
+			# Not in the water, nor on the street that cuts through the park
+			if Vector2((at.x - LAKE_ASIDE) / 4.2, (at.z + 6.4) / 2.8).length() < 1.0 or absf(at.x) < 1.6:
 				continue
 			var tree := Cutout.make("px/tree_%s" % ["a", "b", "c" if i % 5 == 0 else "a"][_rng.randi() % 3], City.PPU, true)
 			tree.mat.set_shader_parameter("chunk", 5.0)
@@ -196,6 +201,8 @@ func _ready() -> void:
 			tree.position = at + Vector3(DISTRICTS[park], 0.0, 0.0)
 			tree.scale = Vector3.ONE * _rng.randf_range(0.38, 0.62)
 			add_child(tree)
+
+	_suburbs()
 
 	# The railway along the back wall: a gravel embankment and a freight train that never stops
 	var bank := MeshInstance3D.new()
@@ -263,7 +270,7 @@ func _ready() -> void:
 		beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		# The cone hangs from a pivot at its point, so turning the pivot sweeps the beam
 		var lamp := Node3D.new()
-		lamp.position = Vector3(TOWNS[i / 2] + (-5.5 if i % 2 == 0 else 5.5), 0.3, -16.4)
+		lamp.position = Vector3(TOWNS[i / 2] + (-5.5 if i % 2 == 0 else 5.5), 0.3, -41.5)
 		beam.position.y = BEAM_LENGTH * 0.5
 		lamp.add_child(beam)
 		add_child(lamp)
@@ -318,7 +325,7 @@ func set_quality(level: int) -> void:
 	_lens.set_shader_parameter("levels", 64.0 if retro else 0.0)
 	_shadow_reach = q.shadows
 	get_viewport().positional_shadow_atlas_size = q.atlas
-	_lens.set_shader_parameter("blurring", 1.0 if q.blur and lens_blur else 0.0)
+	_lens.set_shader_parameter("blurring", 0.0)
 
 
 ## Applies the menu's picture options. `picture`: 0 = start at what suits the device and step down
@@ -379,11 +386,9 @@ func update_camera(delta: float, focus_x: float, heading := 0.0, focus_z := 0.0)
 	var yaw := YAW - _swivel + sin(_time * 0.23) * (0.025 + 0.3 * _drama)
 	# On the road behind the city the camera climbs to look over the roofs, and looks further in
 	_deep = lerpf(_deep, clampf(focus_z / Roads.BACK, 0.0, 1.0), 1.0 - exp(-2.5 * delta)) if delta > 0.0 else 0.0
-	var pitch := lerpf(PITCH, PITCH_DEEP, _deep) + sin(_time * 0.17 + 1.0) * 0.015 + 0.1 * _drama
+	var pitch := lerpf(PITCH, PITCH_DEEP, _deep) + sin(_time * 0.17 + 1.0) * 0.008 + 0.03 * _drama
 	target.z = Roads.BACK * 0.45 * _deep
 	_lens.set_shader_parameter("sharp", 4.6 + 13.0 * _deep)
-	for r: Array in _ridges:
-		r[0].position.x = r[1] + _cam_x * r[2]
 	camera.position = target + Vector3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch)) * dist * (1.0 - 0.08 * _drama) + jolt
 	camera.look_at(target + jolt + Vector3(_swivel * 14.0, 0.0, 0.0))
 	for i in _beams.size():
@@ -415,10 +420,44 @@ func _ridge(art_name: String, z: float, height: float, copy: int) -> void:
 		ridge.mat.set_shader_parameter("mirror", 1.0)
 	ridge.set_border(1.0)
 	ridge.mat.set_shader_parameter("world_clip", EDGE)
-	_ridges.append([ridge, ridge.position.x, PARALLAX[art_name]])
-	ridge.set_tint(Color(0.62, 0.62, 0.72))
+	ridge.set_tint(LAYER_TINT[art_name])
+	ridge.mat.set_shader_parameter("glow", 0.45)
 	ridge.mat.set_shader_parameter("paper", Cutout.PLYWOOD)
 	add_child(ridge)
+
+
+## The town behind the back road: rows of houses, churches and schools out to the railway. They are
+## scenery only (nothing lands on them), so each kind is drawn in one go however many there are.
+func _suburbs() -> void:
+	var kinds := ["house_a", "house_b", "house_c", "townhomes", "church", "school", "shop", "firehouse", "tree_a", "tree_b", "house_a", "house_c"]
+	var spots: Array = []
+	for i in kinds.size():
+		spots.append([])
+	var z := Roads.BACK - 2.1
+	while z > SUBURB_BACK:
+		var x := -Roads.SIDE + 1.0 + _rng.randf() * 1.5
+		while x < Roads.SIDE - 1.0:
+			var kind := _rng.randi() % kinds.size()
+			var size := _rng.randf_range(0.5, 0.68) * (0.75 if kinds[kind].begins_with("tree") else 1.0)
+			spots[kind].append(Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * size), Vector3(x, 0.0, z + _rng.randf_range(-0.3, 0.3))))
+			x += _rng.randf_range(1.5, 2.8)
+		z -= 2.0
+	for i in kinds.size():
+		var proto := Cutout.make("px/" + kinds[i], City.PPU, true)
+		proto.mat.set_shader_parameter("chunk", 5.0)
+		proto.add_backing()
+		proto.set_tint(Color(0.72, 0.72, 0.9))
+		var many := MultiMesh.new()
+		many.transform_format = MultiMesh.TRANSFORM_3D
+		many.mesh = proto.mesh
+		many.instance_count = spots[i].size()
+		for j in spots[i].size():
+			many.set_instance_transform(j, spots[i][j])
+		var row := MultiMeshInstance3D.new()
+		row.multimesh = many
+		row.material_override = proto.mat
+		add_child(row)
+		proto.free()
 
 
 ## The string a sky cut-out dangles from.
