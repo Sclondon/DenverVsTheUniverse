@@ -74,6 +74,8 @@ func _adopt(node: Node, copies: Dictionary) -> void:
 			if not copies.has(src):
 				var copy: StandardMaterial3D = src.duplicate()
 				copy.metallic_specular = 0.6
+				# The models carry soft contact shading painted into their vertex colours
+				copy.vertex_color_use_as_albedo = true
 				copies[src] = copy
 				_mats.append(copy)
 				_made.append({"albedo": copy.albedo_color, "glows": copy.emission_enabled, "emission": copy.emission, "energy": copy.emission_energy_multiplier})

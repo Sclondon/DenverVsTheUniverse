@@ -50,6 +50,7 @@ def mat(color, rough=0.4, metal=0.0, emit=0.0, alpha=1.0):
         b.inputs["Alpha"].default_value = alpha
         m.surface_render_method = 'BLENDED'
     m.diffuse_color = (*rgb, alpha)
+    m["unshaded"] = emit > 0.0 or alpha < 1.0
     MATS[key] = m
     return m
 
@@ -126,6 +127,9 @@ def loft(name, material, secs, n=18, **kw):
     for ring in (rings[0], rings[-1]):
         if len(ring) > 1:
             bm.faces.new(ring)
+    sizes = [min(s[1], s[2]) for s in secs if s[1] > 1e-5 and s[2] > 1e-5]
+    if n >= 10 and sizes and "subdiv" not in kw:
+        kw.setdefault("bevel", min(0.012, min(sizes) * 0.22))
     return _finish(bm, name, material, **kw)
 
 
@@ -167,6 +171,83 @@ def ball(name, material, radii, **kw):
 
 
 SIDES = ((-1.0, "l"), (1.0, "r"))
+
+
+def lettering(name, material, words, size, **kw):
+    """Raised lettering, lying in the XZ plane facing -Y."""
+    curve = bpy.data.curves.new(name, 'FONT')
+    curve.body = words
+    curve.size = size
+    curve.extrude = 0.004
+    curve.align_x = 'CENTER'
+    ob = bpy.data.objects.new(name, curve)
+    bpy.context.collection.objects.link(ob)
+    bpy.context.view_layer.update()
+    me = bpy.data.meshes.new_from_object(ob.evaluated_get(bpy.context.evaluated_depsgraph_get()))
+    bpy.data.objects.remove(ob)
+    me.materials.append(material)
+    ob = bpy.data.objects.new(name, me)
+    bpy.context.collection.objects.link(ob)
+    ob.parent = kw.get("parent")
+    ob.location = kw.get("loc", (0, 0, 0))
+    rot = kw.get("rot", (0, 0, 0))
+    ob.rotation_euler = [math.radians(rot[0] + 90.0), math.radians(rot[1]), math.radians(rot[2])]
+    return ob
+
+
+def finalize():
+    """Turns the finished figure into plain meshes (modifiers applied) and paints soft contact
+    shading into their vertex colours, so creases and joints read without any lights."""
+    scene = bpy.context.scene
+    bpy.context.view_layer.update()
+    deps = bpy.context.evaluated_depsgraph_get()
+    meshes = [o for o in scene.objects if o.type == 'MESH']
+    baked = [bpy.data.meshes.new_from_object(o.evaluated_get(deps)) for o in meshes]
+    for o, me in zip(meshes, baked):
+        o.modifiers.clear()
+        o.data = me
+    world = bpy.data.worlds.new("bake")
+    world.light_settings.distance = 0.5
+    scene.world = world
+    scene.render.engine = 'CYCLES'
+    scene.cycles.device = 'CPU'
+    scene.cycles.samples = 24
+    scene.render.bake.target = 'VERTEX_COLORS'
+    import numpy as np
+    for o in meshes:
+        attr = o.data.color_attributes.new("Col", 'BYTE_COLOR', 'CORNER')
+        o.data.color_attributes.active_color = attr
+        o.data.color_attributes.render_color_index = 0
+        count = len(attr.data) * 4
+        if o.data.materials[0].get("unshaded"):
+            attr.data.foreach_set("color", np.ones(count, dtype=np.float32))
+            continue
+        for other in scene.objects:
+            other.select_set(other == o)
+        bpy.context.view_layer.objects.active = o
+        bpy.ops.object.bake(type='AO')
+        shade = np.zeros(count, dtype=np.float32)
+        attr.data.foreach_get("color", shade)
+        shade = shade.reshape(-1, 4)
+        # Keep it gentle: the lamps on the table do the real lighting
+        shade[:, :3] = 0.42 + 0.58 * np.clip(shade[:, :3] * 1.15, 0.0, 1.0)
+        shade[:, 3] = 1.0
+        attr.data.foreach_set("color", shade.ravel())
+    # Show the shading in Blender too
+    for m in bpy.data.materials:
+        if not m.use_nodes or m.get("unshaded"):
+            continue
+        tree = m.node_tree
+        bsdf = tree.nodes["Principled BSDF"]
+        col = tree.nodes.new("ShaderNodeVertexColor")
+        col.layer_name = "Col"
+        mix = tree.nodes.new("ShaderNodeMix")
+        mix.data_type = 'RGBA'
+        mix.blend_type = 'MULTIPLY'
+        mix.inputs[0].default_value = 1.0
+        mix.inputs[6].default_value = bsdf.inputs["Base Color"].default_value
+        tree.links.new(col.outputs["Color"], mix.inputs[7])
+        tree.links.new(mix.outputs[2], bsdf.inputs["Base Color"])
 
 
 # --- The robot ------------------------------------------------------------------------------------
@@ -219,6 +300,16 @@ def robot():
         loft("hand", joint, [(-1.32, 0.048, 0.056, 3.0), (-1.42, 0.062, 0.074, 3.0), (-1.53, 0.036, 0.05, 3.0)], parent=fore)
         loft("missile", white, [(-0.8, 0.0, 0.0), (-0.82, 0.027, 0.027), (-1.28, 0.027, 0.027)], n=10, parent=fore, loc=(s * 0.128, 0, 0))
         loft("missile_tip", red, [(-1.28, 0.027, 0.027), (-1.4, 0.0, 0.0)], n=10, parent=fore, loc=(s * 0.128, 0, 0))
+        for turn in (0.0, 90.0):
+            plate("missile_fin", red, [(-0.07, -0.8), (0.07, -0.8), (0.03, -0.93), (-0.03, -0.93)], 0.008, parent=fore, loc=(s * 0.128, 0, 0), rot=(0, 0, turn))
+        # Fingers and a thumb, and an armoured disc on the shoulder
+        for i in range(3):
+            box("finger", joint, (0.024, 0.036, 0.1), parent=fore, loc=((i - 1) * 0.03, -0.012, -1.56), rot=(-14, 0, 0))
+        box("thumb", joint, (0.026, 0.03, 0.07), parent=fore, loc=(s * -0.058, -0.03, -1.47), rot=(-30, s * 24.0, 0))
+        lathe("shoulder_cap", armor, [(0.0, 0.0), (0.105, 0.0), (0.12, 0.025), (0.09, 0.05), (0.0, 0.055)], n=20, parent=arm, loc=(s * 0.095, 0, 0.0), rot=(0, s * 90.0, 0))
+        ball("shoulder_stud", green, 0.03, parent=arm, loc=(s * 0.155, 0, 0.0))
+        loft("thigh_panel", hull, [(-0.1, 0.07, 0.016, 3.0), (-0.26, 0.08, 0.016, 3.0)], parent=leg, loc=(0, -0.133, 0))
+        loft("shin_guard", armor, [(-0.98, 0.07, 0.02, 3.0), (-1.26, 0.085, 0.02, 3.0)], parent=shin, loc=(0, -0.132, 0))
 
         # Shoulder: the jet's intake, raked lip forward, with a tail fin rising from it
         loft("intake", hull, [(-0.24, 0.13, 0.13, 6.0), (0.0, 0.15, 0.16, 6.0), (0.25, 0.15, 0.17, 6.0, 0, 0.01)], loc=(s * 0.64, 0.0, 2.6), rot=(98, 0, 0))
@@ -226,11 +317,15 @@ def robot():
         loft("intake_lip", green, [(-0.02, 0.153, 0.163, 6.0), (0.02, 0.153, 0.164, 6.0)], loc=(s * 0.64, 0.0, 2.6), rot=(98, 0, 0))
         fin = pivot("fin_" + sn, (s * 0.66, 0.02, 2.72), rot=(s * 9.0, 0, 90.0 - s * 42.0))
         plate("tail", hull, [(-0.2, 0.0), (0.24, 0.0), (0.36, 0.78), (0.15, 0.78)], 0.045, parent=fin)
+        lettering("tail_number", joint, "15", 0.2, parent=fin, loc=(0.13, -0.025 * s, 0.26), rot=(0, 0, 0 if s > 0 else 180))
         plate("tail_tip", armor, [(0.15, 0.78), (0.36, 0.78), (0.385, 0.95), (0.225, 0.95)], 0.05, parent=fin)
         loft("tail_pod", hull2, [(0.0, 0.0, 0.0), (0.06, 0.022, 0.022), (0.3, 0.022, 0.022), (0.36, 0.0, 0.0)], n=8, parent=fin, loc=(0.3, 0, 0.95), rot=(0, -80, 0))
 
         # Wings, folded down the back like a cape, and the stabilators as hip skirts
         plate("wing", hull, [(0.0, 0.34), (0.0, -0.4), (s * 1.02, -0.62), (s * 1.02, -0.36)], 0.04, loc=(s * 0.16, 0.25, 2.32), rot=(0, 0, s * 26.0))
+        wing = plate("wing_roundel_base", hull2, [(s * 0.42, -0.06), (s * 0.42, -0.34), (s * 0.7, -0.4), (s * 0.7, -0.12)], 0.044, loc=(s * 0.16, 0.25, 2.32), rot=(0, 0, s * 26.0))
+        for r, paint in ((0.12, mat("2a6fe0", 0.4)), (0.08, mat("f2f2f2", 0.4)), (0.04, red)):
+            lathe("roundel", paint, [(0.0, 0.0), (r, 0.0), (r, 0.004 + (0.12 - r) * 0.05), (0.0, 0.004 + (0.12 - r) * 0.05)], n=20, parent=wing, loc=(s * 0.56, -0.022, -0.23), rot=(90, 0, 0))
         plate("wing_stripe", armor, [(s * 0.8, -0.235), (s * 0.8, -0.575), (s * 0.9, -0.596), (s * 0.9, -0.292)], 0.046, loc=(s * 0.16, 0.25, 2.32), rot=(0, 0, s * 26.0))
         plate("stabilator", hull2, [(0.0, 0.1), (0.0, -0.2), (s * 0.4, -0.42), (s * 0.4, -0.25)], 0.035, loc=(s * 0.22, 0.09, 1.64), rot=(0, 0, s * 38.0))
         # Engine humps down the spine
@@ -243,6 +338,15 @@ def robot():
     loft("chest", hull, [(1.94, 0.15, 0.12, 3.0), (2.14, 0.3, 0.2, 3.0), (2.42, 0.4, 0.235, 3.4), (2.6, 0.38, 0.21, 3.4), (2.7, 0.2, 0.15, 3.0)])
     loft("collar", armor, [(2.56, 0.385, 0.216, 3.4), (2.63, 0.345, 0.196, 3.4)])
     ball("core", core, 0.062, loc=(0, -0.155, 2.1))
+    # A space ranger's chest: three big buttons one side, a badge the other, and vents under the collar
+    for i, lamp in enumerate((mat("ff2d3d", 0.3, 0.0, 2.0), mat("86ff4a", 0.3, 0.0, 2.0), mat("2a8fff", 0.3, 0.0, 2.0))):
+        lathe("button", lamp, [(0.0, 0.0), (0.03, 0.0), (0.03, 0.02), (0.02, 0.03), (0.0, 0.032)], n=14, loc=(0.16 + i * 0.075, -0.2 + i * 0.012, 2.3), rot=(90, 0, 0))
+    plate("badge", green, [(-0.07, 0.07), (0.07, 0.07), (0.07, -0.02), (0.0, -0.09), (-0.07, -0.02)], 0.02, loc=(-0.22, -0.205, 2.32), rot=(0, 0, 8))
+    lettering("badge_word", joint, "DEN", 0.05, loc=(-0.22, -0.218, 2.31), rot=(0, 0, 8))
+    for s, sn in SIDES:
+        for i in range(3):
+            box("vent", joint, (0.11, 0.02, 0.016), loc=(s * 0.2, -0.212 + 0.004 * i, 2.5 - i * 0.035), rot=(-12, 0, 0), bevel=0.004)
+        plate("ear_fin", hull, [(-0.04, 0.0), (0.06, 0.0), (0.1, 0.2), (0.04, 0.2)], 0.02, loc=(s * 0.17, -0.02, 2.9), rot=(s * 14.0, 0, 90))
     loft("core_ring", joint, [(0.0, 0.085, 0.085), (0.03, 0.08, 0.08)], n=14, loc=(0, -0.14, 2.1), rot=(90, 0, 0))
     ball("canopy", glass, (0.1, 0.085, 0.24), loc=(0, -0.2, 2.42), rot=(-8, 0, 0))
     loft("canopy_frame", joint, [(0.0, 0.112, 0.25, 2.0), (0.02, 0.105, 0.24, 2.0)], loc=(0, -0.2, 2.42), rot=(82, 0, 0))
@@ -516,7 +620,12 @@ def main():
         bpy.ops.wm.read_factory_settings(use_empty=True)
         MATS.clear()
         span, centre_z = build()
-        bpy.ops.export_scene.gltf(filepath=os.path.join(out, name + ".glb"), export_format='GLB', export_apply=True, export_yup=True)
+        finalize()
+        bpy.ops.export_scene.gltf(filepath=os.path.join(out, name + ".glb"), export_format='GLB', export_apply=True, export_yup=True,
+                                  export_vertex_color='ACTIVE', export_all_vertex_colors=False)
+        blends = os.path.join(os.path.dirname(os.path.abspath(__file__)), "blend")
+        os.makedirs(blends, exist_ok=True)
+        bpy.ops.wm.save_as_mainfile(filepath=os.path.join(blends, name + ".blend"), check_existing=False)
         if shots:
             os.makedirs(shots, exist_ok=True)
             preview(os.path.join(shots, name), span, centre_z)
