@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://cyail4b7a2v7b"
-path="res://.godot/imported/alien_mite.glb-c3966a5478840b326a98aeaf234b10eb.scn"
+uid="uid://7ywwdvpd21yh"
+path="res://.godot/imported/alien_cube.glb-c8da1eb8ded53b66b6f6e4540f9c241d.scn"
 
 [deps]
 
-source_file="res://models/alien_mite.glb"
-dest_files=["res://.godot/imported/alien_mite.glb-c3966a5478840b326a98aeaf234b10eb.scn"]
+source_file="res://models/alien_cube.glb"
+dest_files=["res://.godot/imported/alien_cube.glb-c8da1eb8ded53b66b6f6e4540f9c241d.scn"]
 
 [params]
 

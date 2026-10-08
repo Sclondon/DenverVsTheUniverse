@@ -16,14 +16,14 @@ const TUNED_TOP := 12.4
 const RAY_CHARGE := 1.2
 const RAY_FIRE := 0.6
 
-## The five invasions, five waves each (the last goes on for ever): who comes, in what order they
-## join in, what colour their plastic is and which kaiju they drop.
+## The five invasions, five waves each (the last goes on for ever). Each has its own figures: the
+## ranks in the order they join in, and the kaiju it drops.
 const INVASIONS := [
-	{"name": "THE VENUSIANS", "tint": "ffffff", "ranks": ["grunt", "crab", "diver", "spitter"], "kaiju": "kaiju"},
-	{"name": "THE EUROPANS", "tint": "8fd8ff", "ranks": ["crab", "spitter", "grunt", "splitter"], "kaiju": "turtle"},
-	{"name": "THE TITANS", "tint": "ffb060", "ranks": ["brute", "grunt", "diver", "splitter"], "kaiju": "kaiju"},
-	{"name": "THE OORT CLOUD COLLECTIVE", "tint": "d0c0ff", "ranks": ["prism", "splitter", "diver", "prism"], "kaiju": "turtle"},
-	{"name": "FROM DEEP SPACE", "tint": "ffffff", "ranks": ["seraph", "prism", "brute", "spitter"], "kaiju": "kaiju"},
+	{"name": "THE VENUSIANS", "ranks": ["grunt", "crab", "diver", "spitter"], "kaiju": "kaiju"},
+	{"name": "THE EUROPANS", "ranks": ["jelly", "squid", "angler", "urchin"], "kaiju": "turtle"},
+	{"name": "THE TITANS", "ranks": ["hoplite", "meteor", "saturn", "brute"], "kaiju": "cyclops"},
+	{"name": "THE OORT CLOUD COLLECTIVE", "ranks": ["cube", "shard", "prism", "cluster"], "kaiju": "strider"},
+	{"name": "FROM DEEP SPACE", "ranks": ["orb", "seraph", "eye", "bulwark"], "kaiju": "stalker"},
 ]
 
 
@@ -70,7 +70,6 @@ func cleared() -> bool:
 func spawn(kind: String, at: Vector2, mode := Alien.Mode.FORM) -> Alien:
 	var a := Alien.new()
 	a.init(kind, hp_scale)
-	a.set_tint(Color(invasion(wave).tint))
 	a.mode = mode
 	a.pos = at
 	a.phase = rng.randf() * TAU
@@ -327,9 +326,9 @@ func _squad(centre: float, cols: int, rows: int, kinds: Array) -> void:
 	for r in rows:
 		for c in cols:
 			var kind: String = kinds[r]
-			# A brute is a squad of its own: one per row, the rest are grunts
-			if kind == "brute" and c > 0:
-				kind = "grunt"
+			# A heavy is one to a row: the rest are the rank and file of its invasion
+			if Alien.TYPES[kind].get("heavy", false) and c > 0:
+				kind = invasion(wave).ranks[0]
 			var a := spawn(kind, squad.origin)
 			a.squad = squad
 			a.slot = Vector2((c - (cols - 1) * 0.5) * SPACING.x, -r * SPACING.y)
@@ -366,7 +365,7 @@ func _drop_bomb(form: Array[Alien]) -> void:
 			a = other
 	if a.flip < 1.0 or rng.randf() > float(a.def.bomb):
 		return
-	if a.kind == "brute":
+	if a.def.get("heavy", false):
 		game.enemy_fire("big", a.pos + Vector2(0.0, -a.hy), Vector2(0.0, -3.2))
 	else:
 		game.enemy_fire("bomb", a.pos + Vector2(0.0, -a.hy), Vector2(0.0, -(2.7 + 0.15 * wave)))
@@ -436,8 +435,13 @@ func _boss(a: Alien, delta: float) -> void:
 				var ang := (i - 2) * 0.22
 				game.enemy_fire("bomb", a.pos + Vector2((i - 2) * 0.9, -1.2), Vector2(sin(ang), -cos(ang)) * (4.0 + 0.1 * wave))
 		2:
+			# It launches whatever this invasion dives with
+			var escort := "diver"
+			for rank: String in invasion(wave).ranks:
+				if Alien.TYPES[rank].get("dives", false):
+					escort = rank
 			for sx: float in [-2.0, 2.0]:
-				var d := spawn("diver", a.pos + Vector2(sx, -1.0), Alien.Mode.DIVE)
+				var d := spawn(escort, a.pos + Vector2(sx, -1.0), Alien.Mode.DIVE)
 				d.flip = 1.0
 				start_dive(d)
 				d.goal_pt.x = clampf(game.player.x + sx, -City.HALF, City.HALF)

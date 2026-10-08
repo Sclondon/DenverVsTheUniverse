@@ -304,12 +304,12 @@ func hit_alien(a: Alien, dmg: float, _at: Vector2) -> void:
 	fx.burst(at, a.color, 16, 5.0)
 	people.cheer(a.pos.x)
 	Sfx.play("pop", rng.randf_range(0.85, 1.2), -7.0)
+	if a.def.has("splits"):
+		for side: float in [-0.4, 0.4]:
+			var mite := swarm.spawn(a.def.splits, a.pos + Vector2(side, 0.0), Alien.Mode.FREE)
+			mite.flip = 1.0
+			mite.phase = 0.0 if side > 0.0 else PI
 	match a.kind:
-		"splitter":
-			for side: float in [-0.4, 0.4]:
-				var mite := swarm.spawn("mite", a.pos + Vector2(side, 0.0), Alien.Mode.FREE)
-				mite.flip = 1.0
-				mite.phase = 0.0 if side > 0.0 else PI
 		"saucer":
 			shots.fire("crate", a.pos, Vector2(0.0, -1.7))
 		"boss":
@@ -336,7 +336,7 @@ func alien_crashed(a: Alien) -> void:
 			if defenses.wall_holds():
 				fx.text(Vector3(a.pos.x, 2.0, 0.5), "THE WALL HOLDS", Color("ffd23f"), 40)
 			else:
-				hurt_building(b, {"mite": 1, "diver": 2, "brute": 8}.get(a.kind, 4), b.roof())
+				hurt_building(b, int(a.def.get("crash", 4)), b.roof())
 	swarm.remove(a)
 
 

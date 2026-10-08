@@ -1,10 +1,12 @@
 extends SceneTree
 ## Screenshots of each part of the game, for checking the look by eye.
-## godot --path . -s tests/shots.gd -- --shots=<dir> [--portrait]
+## godot --path . -s tests/shots.gd -- --shots=<dir> [--portrait] [--idle] [--invasions]
 
 var main: Node
 var out := "user://shots"
 var portrait := false
+var idle := false
+var invasions := false
 
 
 func _initialize() -> void:
@@ -13,6 +15,10 @@ func _initialize() -> void:
 			out = arg.trim_prefix("--shots=")
 		if arg == "--portrait":
 			portrait = true
+		if arg == "--idle":
+			idle = true
+		if arg == "--invasions":
+			invasions = true
 	DirAccess.make_dir_recursive_absolute(out)
 	DisplayServer.window_set_size(Vector2i(540, 1170) if portrait else Vector2i(1280, 720))
 	main = load("res://main.tscn").instantiate()
@@ -35,6 +41,28 @@ func _run() -> void:
 	await _snap("1_title")
 	main.start_game()
 	_tough()
+	if invasions:
+		# A late wave of each invasion, with its kaiju down
+		for n: int in [4, 9, 14, 19, 24]:
+			main.wave = n - 1
+			main._next_wave()
+			await _wait(6.0)
+			await _snap("wave_%02d" % n)
+		quit()
+		return
+	if idle:
+		# Far from the aliens, so it has nothing to shoot
+		main.player.x = -55.0
+		main.player.goal_x = -55.0
+		var cam: Camera3D = root.get_camera_3d()
+		for i in 12:
+			await _wait(0.5)
+			cam.global_position = Vector3(main.player.x + 0.5, 2.6, 9.0)
+			cam.look_at(Vector3(main.player.x + 0.5, 2.4, 0.0))
+			cam.fov = 40.0
+			await _snap("idle_%02d" % i)
+		quit()
+		return
 	await _wait(5.0)
 	await _snap("2_wave1")
 	main.player.goal_x = 9.0

@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://xbxvuvc1hqc7"
-path="res://.godot/imported/alien_splitter.glb-832f3314abc127869ef757df63522fd5.scn"
+uid="uid://6scmhhg5cj1y"
+path="res://.godot/imported/alien_squid.glb-b7d56312603a9edaf6c1377ea0aed305.scn"
 
 [deps]
 
-source_file="res://models/alien_splitter.glb"
-dest_files=["res://.godot/imported/alien_splitter.glb-832f3314abc127869ef757df63522fd5.scn"]
+source_file="res://models/alien_squid.glb"
+dest_files=["res://.godot/imported/alien_squid.glb-b7d56312603a9edaf6c1377ea0aed305.scn"]
 
 [params]
 

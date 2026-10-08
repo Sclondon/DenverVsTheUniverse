@@ -102,6 +102,36 @@ func _run() -> void:
 				r, main.wave, main.score, t, main.city.percent(), main.player.hearts, main.levels])
 		waves.append(main.wave)
 		await process_frame
+	# Every invasion has figures of its own, and all of them load and take the field
+	main.start_game()
+	var used := {}
+	for inv: Dictionary in main.swarm.INVASIONS:
+		for kind: String in inv.ranks + [inv.kaiju]:
+			_check(not used.has(kind), "%s belongs to one invasion only" % kind)
+			used[kind] = true
+			var a = main.swarm.spawn(kind, Vector2(0.0, 8.0))
+			_check(a.body != null, "%s has a model" % kind)
+			if a.def.has("splits"):
+				_check(main.swarm.spawn(a.def.splits, Vector2(2.0, 8.0)).body != null, "%s has a model" % a.def.splits)
+	for n: int in [7, 9, 12, 14, 15, 17, 19, 22, 24, 25]:
+		main.wave = n
+		main.swarm.spawn_wave(n)
+		for i in 60:
+			main.swarm.update(STEP)
+	# The robot holds its fire until something is inside its ring
+	main.swarm.clear()
+	main.shots.clear()
+	for i in 40:
+		main.player.update(STEP, true)
+	_check(main.shots.list.is_empty(), "nothing in range, nothing fired")
+	var far = main.swarm.spawn("grunt", Vector2(main.player.x + main.player.aim_range + 8.0, 6.0))
+	for i in 40:
+		main.player.update(STEP, true)
+	_check(main.shots.list.is_empty(), "an alien out of range is not shot at")
+	far.pos.x = main.player.x + 3.0
+	for i in 40:
+		main.player.update(STEP, true)
+	_check(not main.shots.list.is_empty(), "an alien in range is shot at")
 	for kind in ["grunt", "crab", "diver", "spitter", "saucer", "boss"]:
 		_check(seen.has(kind), "saw a %s" % kind)
 	_check(waves.max() >= 5, "autopilot reaches the first mothership")

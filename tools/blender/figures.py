@@ -173,6 +173,82 @@ def ball(name, material, radii, **kw):
 SIDES = ((-1.0, "l"), (1.0, "r"))
 
 
+def toward(d):
+    """The rotation (in degrees) that turns a piece's local Z to point along `d`."""
+    e = Vector((0, 0, 1)).rotation_difference(Vector(d).normalized()).to_euler()
+    return tuple(math.degrees(a) for a in e)
+
+
+def around(count):
+    """`count` directions spread evenly over a ball."""
+    out = []
+    for i in range(count):
+        z = 1.0 - 2.0 * (i + 0.5) / count
+        r = math.sqrt(1.0 - z * z)
+        out.append(Vector((math.cos(i * 2.39996) * r, math.sin(i * 2.39996) * r, z)))
+    return out
+
+
+def strut(name, material, a, b, r0, r1, n=8, **kw):
+    """A tapering rod from `a` to `b`; a zero radius makes a point."""
+    a, b = Vector(a), Vector(b)
+    kw.setdefault("bevel", 0.0)
+    return loft(name, material, [(0.0, r0, r0), ((b - a).length, r1, r1)], n=n, loc=a, rot=toward(b - a), **kw)
+
+
+def rock(name, material, radii, seed=0, rough=0.16, **kw):
+    """A flat-sided lump: a ball knocked out of true."""
+    import random
+    rnd = random.Random(seed)
+    bm = bmesh.new()
+    bmesh.ops.create_icosphere(bm, subdivisions=2, radius=1.0)
+    if isinstance(radii, (int, float)):
+        radii = (radii, radii, radii)
+    for v in bm.verts:
+        v.co *= 1.0 + rnd.uniform(-rough, rough)
+    bmesh.ops.scale(bm, vec=radii, verts=bm.verts)
+    kw.setdefault("sharp", 1.0)
+    return _finish(bm, name, material, **kw)
+
+
+def crystal(name, material, length, r, **kw):
+    """A six-sided crystal standing on its local Z, pointed at the top."""
+    return loft(name, material, [(0.0, r * 0.7, r * 0.7), (length * 0.7, r, r), (length, 0.0, 0.0)], n=6, sharp=5.0, **kw)
+
+
+def hoop(name, material, inner, outer, thick, n=32, **kw):
+    """A flat ring lying in the XY plane."""
+    bm = bmesh.new()
+    rows = []
+    for i in range(n):
+        c, s = math.cos(2.0 * math.pi * i / n), math.sin(2.0 * math.pi * i / n)
+        rows.append([bm.verts.new((c * r, s * r, z)) for r, z in ((inner, -thick * 0.5), (outer, -thick * 0.5), (outer, thick * 0.5), (inner, thick * 0.5))])
+    for i in range(n):
+        a, b = rows[i], rows[(i + 1) % n]
+        for k in range(4):
+            bm.faces.new((a[k], b[k], b[(k + 1) % 4], a[(k + 1) % 4]))
+    return _finish(bm, name, material, **kw)
+
+
+def banded(name, paints, r, lats, **kw):
+    """A ball painted in stripes: `lats` are the latitudes (degrees) where one paint gives way to the next."""
+    for i in range(len(lats) - 1):
+        steps = max(2, int((lats[i + 1] - lats[i]) / 12.0) + 1)
+        profile = []
+        for k in range(steps + 1):
+            at = math.radians(lats[i] + (lats[i + 1] - lats[i]) * k / steps)
+            profile.append((max(0.0, math.cos(at)) * r, math.sin(at) * r))
+        lathe(name, paints[i % len(paints)], profile, n=24, sharp=60, bevel=0.0, **kw)
+
+
+def eyeball(parent, at, r, iris, white="fff6d8"):
+    """An eye looking out along -Y: the white, a lit iris and a pupil."""
+    at = Vector(at)
+    ball("eye", mat(white, 0.15), (r, r * 0.6, r), parent=parent, loc=at)
+    ball("iris", mat(iris, 0.2, 0.0, 2.0), (r * 0.56, r * 0.3, r * 0.56), parent=parent, loc=at + Vector((0, -r * 0.42, 0)))
+    ball("pupil", mat("08080c", 0.1), (r * 0.26, r * 0.2, r * 0.26), parent=parent, loc=at + Vector((0, -r * 0.62, 0)))
+
+
 def lettering(name, material, words, size, **kw):
     """Raised lettering, lying in the XZ plane facing -Y."""
     curve = bpy.data.curves.new(name, 'FONT')
@@ -482,16 +558,16 @@ def alien_diver():
 
 
 def alien_brute():
-    """A tin-toy robot: all boxes, rivets and claws."""
-    tin = mat("aeb6c2", 0.25, 0.5)
-    tin2 = mat("6d7480", 0.3, 0.5)
+    """Talos, the Titans' bronze automaton: all boxes, rivets and claws, under a centurion's crest."""
+    tin = mat("c8823a", 0.28, 0.6)
+    tin2 = mat("7a4a22", 0.35, 0.5)
     dark = mat("22252d", 0.45, 0.3)
-    red = mat("e0263c", 0.35)
+    red = mat("2fb5a0", 0.4)
     box("body", tin, (1.4, 0.8, 1.1), loc=(0, 0, -0.05), bevel=0.07)
-    box("head", mat("c9cfd6", 0.22, 0.5), (0.9, 0.66, 0.6), loc=(0, 0, 0.8), bevel=0.06)
+    box("head", mat("d99a4a", 0.25, 0.6), (0.9, 0.66, 0.6), loc=(0, 0, 0.8), bevel=0.06)
     box("visor", mat("08080c", 0.3), (0.7, 0.06, 0.18), loc=(0, -0.33, 0.86), bevel=0.01)
     for s, sn in SIDES:
-        box("eye", mat("ff2d3d", 0.3, 0.0, 3.0), (0.24, 0.06, 0.09), loc=(s * 0.17, -0.35, 0.86), bevel=0.01)
+        box("eye", mat("ffb02e", 0.3, 0.0, 3.0), (0.24, 0.06, 0.09), loc=(s * 0.17, -0.35, 0.86), bevel=0.01)
         lathe("ear", red, [(0.0, 0.0), (0.12, 0.02), (0.12, 0.08), (0.0, 0.1)], n=14, loc=(s * 0.45, 0, 0.8), rot=(0, s * 90.0, 0))
         arm = pivot("arm_" + sn, (s * 0.86, 0.0, 0.3))
         ball("shoulder", dark, 0.2, parent=arm)
@@ -502,31 +578,14 @@ def alien_brute():
         box("leg", tin2, (0.44, 0.5, 0.5), loc=(s * 0.36, 0, -0.86), bevel=0.04)
         box("foot", dark, (0.5, 0.66, 0.14), loc=(s * 0.36, -0.08, -1.1), bevel=0.03)
         for i in range(3):
-            ball("rivet", mat("c9cfd6", 0.2, 0.6), 0.035, loc=(s * 0.62, -0.4, -0.45 + i * 0.4))
-    lathe("antenna", dark, [(0.03, 1.08), (0.02, 1.36)], n=8)
-    ball("antenna_tip", mat("ff3d7f", 0.3, 0.0, 3.0), 0.08, loc=(0, 0, 1.4))
+            ball("rivet", mat("f0c070", 0.2, 0.6), 0.035, loc=(s * 0.62, -0.4, -0.45 + i * 0.4))
+    plate("crest", mat("ff5a1a", 0.5), [(-0.5, 1.08), (-0.42, 1.34), (0.0, 1.46), (0.42, 1.34), (0.5, 1.08)], 0.08)
     box("panel", mat("22303a", 0.3), (0.9, 0.05, 0.44), loc=(0, -0.41, 0.0), bevel=0.01)
     for i, c in enumerate(("ffe14a", "86ff4a", "ff3d7f")):
         ball("lamp", mat(c, 0.3, 0.0, 2.5), 0.09, loc=((i - 1) * 0.26, -0.44, 0.04))
     lathe("key", red, [(0.0, 0.0), (0.05, 0.0), (0.05, 0.3), (0.0, 0.3)], n=8, loc=(0, 0.4, 0.1), rot=(-90, 0, 0))
     plate("key_wings", red, [(-0.22, 0.0), (-0.3, 0.14), (-0.18, 0.26), (0.0, 0.1), (0.18, 0.26), (0.3, 0.14), (0.22, 0.0), (0.0, -0.06)], 0.05, loc=(0, 0.74, 0.0), rot=(0, 0, 90))
     return 3.0, 0.1
-
-
-def alien_splitter():
-    """Two heads on one body: it comes apart into two when it dies."""
-    skin = mat("b9bfca", 0.5)
-    lathe("body", mat("7a4fb0", 0.4), [(0.0, -0.66), (0.2, -0.62), (0.3, -0.45), (0.44, -0.2), (0.3, -0.08), (0.0, -0.06)])
-    for s, _ in SIDES:
-        loft("neck", skin, [(-0.2, 0.07, 0.07), (0.0, 0.06, 0.06)], n=10, loc=(s * 0.2, 0, -0.08), rot=(0, s * 40.0, 0))
-        grey_head(skin, (s * 0.42, 0, 0.2), 0.4)
-    lathe("seam", mat("ff3d7f", 0.3, 0.0, 3.0), [(0.0, -0.64), (0.025, -0.6), (0.025, 0.5), (0.0, 0.54)], n=8, loc=(0, -0.3, 0))
-    return 2.0, 0.0
-
-
-def alien_mite():
-    grey_head(mat("b9bfca", 0.5), (0, 0, 0), 0.38)
-    return 1.1, 0.0
 
 
 def alien_boss():
@@ -658,11 +717,376 @@ def alien_turtle():
     return 3.6, 0.0
 
 
+# --- The Europans: things from the sea under the ice ----------------------------------------------
+
+def alien_jelly():
+    """A jellyfish: a glass bell with a lit heart, trailing four tentacles that swing as it is jerked along."""
+    glass = mat("9fe8ff", 0.08, 0.0, 0.0, 0.5)
+    flesh = mat("e8f6ff", 0.3)
+    glow = mat("ff5fd0", 0.3, 0.0, 3.0)
+    lathe("bell", glass, [(0.0, 0.95), (0.34, 0.9), (0.62, 0.68), (0.74, 0.36), (0.7, 0.12)], sharp=60, bevel=0.0)
+    lathe("skirt", flesh, [(0.6, 0.14), (0.76, 0.1), (0.72, 0.03), (0.5, 0.07)], sharp=60, bevel=0.0)
+    ball("heart", glow, (0.2, 0.2, 0.27), loc=(0, 0, 0.5))
+    for s, _ in SIDES:
+        ball("eye", mat("08080c", 0.05), (0.09, 0.06, 0.12), loc=(s * 0.23, -0.66, 0.42))
+    for i in range(8):
+        a = 2.0 * math.pi * (i + 0.5) / 8
+        ball("bulb", glow, 0.05, loc=(math.sin(a) * 0.74, math.cos(a) * 0.74, 0.09))
+    for name, at in (("arm_l", (-0.4, -0.08, 0.06)), ("arm_r", (0.4, -0.08, 0.06)), ("leg_l", (-0.15, 0.12, 0.06)), ("leg_r", (0.15, 0.12, 0.06))):
+        limb = pivot(name, at)
+        wave = 1.0 if name.endswith("l") else -1.0
+        loft("tentacle", flesh, [(-i * 0.16, 0.07 * (1.0 - i / 8.0) + 0.012, 0.07 * (1.0 - i / 8.0) + 0.012, 2.0, math.sin(i * 1.3) * 0.07 * wave, 0.0) for i in range(8)], n=8, parent=limb, sharp=80)
+        ball("tip", glow, 0.045, parent=limb, loc=(math.sin(7 * 1.3) * 0.07 * wave, 0, -1.14))
+    return 2.8, 0.0
+
+
+def alien_squid():
+    """A torpedo squid, diving point first with its arms streaming behind it."""
+    hide = mat("f4e9ff", 0.25)
+    dark = mat("3a2a6a", 0.4)
+    spot = mat("5ff0ff", 0.3, 0.0, 3.0)
+    lathe("mantle", hide, [(0.0, -0.85), (0.12, -0.66), (0.26, -0.3), (0.3, 0.0), (0.25, 0.22), (0.2, 0.26)], n=20, sharp=60, bevel=0.0)
+    lathe("crown", dark, [(0.2, 0.24), (0.27, 0.34), (0.2, 0.46), (0.0, 0.48)], n=20, bevel=0.0)
+    for s, _ in SIDES:
+        plate("fin", dark, [(0.0, -0.8), (s * 0.44, -0.52), (s * 0.38, -0.3), (0.0, -0.36)], 0.04, loc=(s * 0.08, 0, 0))
+        ball("eye", mat("fff6d8", 0.15), 0.1, loc=(s * 0.2, -0.13, 0.34))
+        ball("pupil", mat("08080c", 0.1), 0.055, loc=(s * 0.22, -0.2, 0.34))
+    for i, (z, y) in enumerate(((-0.08, -0.3), (-0.26, -0.27), (-0.44, -0.22))):
+        ball("spot", spot, 0.045 - i * 0.006, loc=(0, y, z))
+    for i in range(6):
+        a = math.radians(i * 60.0 + 30.0)
+        loft("arm", hide, [(0.0, 0.05, 0.05), (0.3, 0.04, 0.04, 2.0, 0.04, 0.0), (0.58, 0.022, 0.022, 2.0, -0.03, 0.0), (0.76, 0.0, 0.0)], n=8,
+             loc=(math.cos(a) * 0.12, math.sin(a) * 0.12, 0.44), rot=toward((math.cos(a) * 0.34, math.sin(a) * 0.34, 1.0)), sharp=80)
+    return 2.4, 0.15
+
+
+def alien_angler():
+    """An anglerfish from the dark under the ice: all jaw, with a lit lure hung over it."""
+    hide = mat("1c2a4a", 0.45)
+    belly = mat("3b5a8c", 0.45)
+    tooth = mat("fff6d8", 0.3)
+    lure = mat("9dff5a", 0.3, 0.0, 3.5)
+    ball("body", hide, (0.72, 0.62, 0.66))
+    ball("mouth", mat("5a0f1e", 0.5), (0.5, 0.2, 0.27), loc=(0, -0.48, -0.14))
+    loft("jaw", belly, [(0.0, 0.52, 0.12, 3.0), (0.3, 0.44, 0.1, 3.0), (0.42, 0.2, 0.05, 3.0)], n=14, loc=(0, -0.32, -0.4), rot=(90, 0, 0))
+    for i in range(7):
+        loft("tooth", tooth, [(0.0, 0.04, 0.04), (0.22 - abs(i - 3) * 0.02, 0.0, 0.0)], n=6, loc=((i - 3) * 0.13, -0.7 + abs(i - 3) * 0.045, -0.34))
+    for i in range(6):
+        loft("fang", tooth, [(0.0, 0.035, 0.035), (0.16, 0.0, 0.0)], n=6, loc=((i - 2.5) * 0.14, -0.62 + abs(i - 2.5) * 0.03, 0.06), rot=(180, 0, 0))
+    for s, sn in SIDES:
+        ball("eye", mat("d8f6ff", 0.1, 0.0, 0.6), 0.12, loc=(s * 0.36, -0.47, 0.26))
+        ball("pupil", mat("08080c", 0.1), 0.05, loc=(s * 0.37, -0.57, 0.26))
+        fin = pivot("arm_" + sn, (s * 0.66, 0.0, -0.05))
+        plate("fin", belly, [(0.0, 0.1), (s * 0.42, 0.3), (s * 0.5, -0.02), (s * 0.4, -0.3), (0.0, -0.12)], 0.04, parent=fin)
+    for i in range(3):
+        loft("spine", belly, [(0.0, 0.05, 0.05), (0.3 - i * 0.05, 0.0, 0.0)], n=6, loc=(0, 0.1 + i * 0.2, 0.6 - i * 0.08), rot=(-20 - i * 20, 0, 0))
+    loft("stalk", hide, [(0.0, 0.035, 0.035), (0.3, 0.028, 0.028, 2.0, 0, -0.1), (0.48, 0.022, 0.022, 2.0, 0, -0.3), (0.5, 0.02, 0.02, 2.0, 0, -0.5)], n=8, loc=(0, -0.15, 0.58), sharp=80)
+    ball("lure", lure, 0.11, loc=(0, -0.68, 1.06))
+    return 2.4, 0.15
+
+
+def _urchin(r, spikes, length):
+    hide = mat("3a1f5c", 0.45)
+    spike = mat("7a4fd0", 0.35)
+    tip = mat("5ff0ff", 0.3, 0.0, 3.0)
+    ball("body", hide, r)
+    for i, d in enumerate(around(spikes)):
+        if d.y < -0.72:
+            continue
+        loft("spike", spike, [(0.0, r * 0.11, r * 0.11), (length, 0.0, 0.0)], n=6, loc=d * r * 0.9, rot=toward(d))
+        if i % 3 == 0:
+            ball("tip", tip, r * 0.07, loc=d * (r * 0.9 + length))
+    eyeball(pivot("head", (0, 0, 0)), (0, -r * 0.76, 0), r * 0.42, "5ff0ff")
+
+
+def alien_urchin():
+    """A sea urchin with one staring eye. It bursts into two little ones."""
+    _urchin(0.48, 28, 0.42)
+    return 2.2, 0.0
+
+
+def alien_polyp():
+    """What an urchin bursts into."""
+    _urchin(0.26, 14, 0.2)
+    return 1.2, 0.0
+
+
+# --- The Titans: bronze and stone giants from under Saturn ----------------------------------------
+
+def alien_hoplite():
+    """A squat giant in bronze: a crested helmet with a glowing slit, a round shield and a spear."""
+    bronze = mat("e0a040", 0.28, 0.6)
+    dark = mat("7a4a22", 0.35, 0.5)
+    clay = mat("6a7080", 0.6)
+    black = mat("08080c", 0.4)
+    glow = mat("ffb02e", 0.3, 0.0, 3.0)
+    patina = mat("2fb5a0", 0.4)
+    loft("cuirass", bronze, [(-0.45, 0.3, 0.24, 2.6), (-0.1, 0.4, 0.3, 2.6), (0.25, 0.46, 0.3, 2.8), (0.4, 0.3, 0.22, 2.6)])
+    for i in range(5):
+        box("strap", dark, (0.13, 0.05, 0.3), loc=((i - 2) * 0.15, -0.26 + abs(i - 2) * 0.035, -0.56), bevel=0.01)
+    head = pivot("head", (0, 0, 0.42))
+    loft("helmet", bronze, [(0.0, 0.26, 0.28, 2.4), (0.25, 0.3, 0.32, 2.4), (0.5, 0.24, 0.27), (0.62, 0.0, 0.0)], parent=head, sharp=60)
+    box("slit", black, (0.36, 0.05, 0.08), parent=head, loc=(0, -0.3, 0.32), bevel=0.01)
+    box("nose_slit", black, (0.08, 0.05, 0.26), parent=head, loc=(0, -0.3, 0.17), bevel=0.01)
+    for s, _ in SIDES:
+        box("eye", glow, (0.1, 0.04, 0.05), parent=head, loc=(s * 0.1, -0.32, 0.32), bevel=0.005)
+    plate("crest", mat("ff5a1a", 0.5), [(-0.38, 0.48), (-0.32, 0.78), (0.0, 0.94), (0.32, 0.78), (0.38, 0.48), (0.0, 0.58)], 0.07, parent=head)
+    for s, sn in SIDES:
+        arm = pivot("arm_" + sn, (s * 0.52, 0.0, 0.25))
+        ball("shoulder", bronze, 0.16, parent=arm)
+        loft("upper", clay, [(0.0, 0.11, 0.11), (-0.38, 0.09, 0.09)], n=10, parent=arm)
+        loft("bracer", bronze, [(-0.38, 0.1, 0.1), (-0.7, 0.085, 0.085)], n=10, parent=arm)
+        ball("fist", clay, 0.105, parent=arm, loc=(0, 0, -0.76))
+        leg = pivot("leg_" + sn, (s * 0.18, 0.0, -0.5))
+        loft("thigh", clay, [(0.0, 0.13, 0.13), (-0.3, 0.11, 0.11)], n=10, parent=leg)
+        loft("greave", bronze, [(-0.3, 0.115, 0.115), (-0.6, 0.085, 0.085)], n=10, parent=leg)
+        box("sandal", dark, (0.18, 0.32, 0.08), parent=leg, loc=(0, -0.06, -0.64), bevel=0.02)
+    arm = bpy.data.objects["arm_l"]
+    lathe("shield", bronze, [(0.0, 0.0), (0.42, 0.0), (0.44, 0.03), (0.3, 0.08), (0.1, 0.11), (0.0, 0.12)], n=24, parent=arm, loc=(-0.06, -0.14, -0.55), rot=(90, 0, 0), sharp=30, bevel=0.0)
+    hoop("shield_rim", patina, 0.36, 0.45, 0.03, n=24, parent=arm, loc=(-0.06, -0.17, -0.55), rot=(90, 0, 0))
+    ball("shield_boss", glow, 0.08, parent=arm, loc=(-0.06, -0.27, -0.55))
+    arm = bpy.data.objects["arm_r"]
+    loft("spear", dark, [(-0.4, 0.025, 0.025), (1.3, 0.025, 0.025)], n=8, parent=arm, loc=(0.02, -0.11, -0.74))
+    plate("spear_tip", bronze, [(-0.07, 1.3), (0.07, 1.3), (0.0, 1.62)], 0.03, parent=arm, loc=(0.02, -0.11, -0.74))
+    return 2.8, 0.1
+
+
+def alien_meteor():
+    """A burning boulder with a face in it, falling on the city."""
+    stone = mat("5a3a2a", 0.7)
+    hot = mat("ff7a1a", 0.3, 0.0, 3.5)
+    rock("rock", stone, (0.5, 0.46, 0.5), seed=3, loc=(0, 0, -0.15))
+    for s, _ in SIDES:
+        box("eye", hot, (0.17, 0.08, 0.07), loc=(s * 0.18, -0.41, -0.06), rot=(0, s * 22.0, 0), bevel=0.01)
+        rock("pebble", stone, 0.12, seed=5, loc=(s * 0.42, 0.1, 0.5 + s * 0.12))
+    plate("mouth", hot, [(-0.2, -0.3), (-0.1, -0.25), (0.0, -0.3), (0.1, -0.25), (0.2, -0.3), (0.1, -0.39), (0.0, -0.34), (-0.1, -0.39)], 0.06, loc=(0, -0.4, 0), bevel=0.0)
+    for i, (x, y, tall) in enumerate(((0.0, 0.0, 1.3), (-0.24, 0.05, 0.95), (0.24, 0.05, 1.0), (-0.1, -0.2, 0.8), (0.12, 0.18, 0.85))):
+        strut("flame", hot if i % 2 == 0 else mat("ffe14a", 0.3, 0.0, 3.5), (x, y, 0.1), (x * 1.5, y * 1.5, tall), 0.2, 0.0, n=6)
+    return 2.2, 0.25
+
+
+def alien_saturn():
+    """A sour little ringed planet with one eye. It breaks up into two moons."""
+    paints = (mat("e8b060", 0.45), mat("c8823a", 0.45), mat("f4d8a0", 0.45))
+    banded("planet", paints, 0.5, [-90, -52, -24, -6, 20, 46, 90])
+    hoop("ring", mat("d9c27a", 0.3, 0.3), 0.7, 0.98, 0.025, rot=(22, 14, 0))
+    hoop("ring_inner", mat("9a6a3a", 0.3, 0.3), 0.6, 0.67, 0.025, rot=(22, 14, 0))
+    head = pivot("head", (0, 0, 0))
+    eyeball(head, (0, -0.4, 0.06), 0.2, "2fb5a0")
+    plate("brow", mat("7a4a22", 0.5), [(-0.26, 0.12), (0.0, 0.0), (0.26, 0.12), (0.26, 0.2), (0.0, 0.09), (-0.26, 0.2)], 0.08, loc=(0, -0.45, 0.22), bevel=0.0)
+    return 2.2, 0.0
+
+
+def alien_moon():
+    """What the ringed planet breaks up into: a cratered moon with an eye."""
+    rock("moon", mat("9a9aa8", 0.7), 0.3, seed=11, rough=0.08)
+    for at in ((0.18, -0.16, 0.16), (-0.2, -0.1, -0.16), (0.05, 0.1, 0.27)):
+        ball("crater", mat("5a5a68", 0.7), (0.08, 0.08, 0.08), loc=at)
+    eyeball(pivot("head", (0, 0, 0)), (-0.03, -0.24, 0.02), 0.12, "ffb02e")
+    return 1.2, 0.0
+
+
+def alien_cyclops():
+    """The Titans' kaiju: a clay giant with one eye, a horn, tusks and a studded club."""
+    clay = mat("a8623a", 0.65)
+    dark = mat("6a3a22", 0.65)
+    bronze = mat("c8823a", 0.28, 0.6)
+    bone = mat("fff6d8", 0.3)
+    loft("body", clay, [(-0.6, 0.42, 0.36), (-0.2, 0.5, 0.4), (0.4, 0.66, 0.44, 2.6), (0.75, 0.56, 0.38, 2.6), (0.9, 0.3, 0.26)], n=18, sharp=80)
+    loft("belt", bronze, [(-0.5, 0.46, 0.39), (-0.36, 0.51, 0.42)])
+    plate("loincloth", mat("b0122e", 0.6), [(-0.24, 0.0), (0.24, 0.0), (0.17, -0.5), (0.0, -0.62), (-0.17, -0.5)], 0.05, loc=(0, -0.41, -0.45))
+    head = pivot("head", (0, -0.1, 0.95))
+    loft("skull", clay, [(-0.1, 0.3, 0.3), (0.15, 0.4, 0.38, 2.4), (0.42, 0.34, 0.32), (0.56, 0.0, 0.0)], n=16, parent=head, sharp=80)
+    eyeball(head, (0, -0.34, 0.24), 0.18, "ffb02e")
+    plate("brow", dark, [(-0.32, 0.12), (0.0, 0.0), (0.32, 0.12), (0.32, 0.22), (0.0, 0.1), (-0.32, 0.22)], 0.1, parent=head, loc=(0, -0.38, 0.38), bevel=0.0)
+    loft("horn", bone, [(0.0, 0.08, 0.08), (0.36, 0.0, 0.0)], n=8, parent=head, loc=(0, -0.08, 0.5), rot=(18, 0, 0))
+    box("mouth", mat("3a0f14", 0.5), (0.36, 0.06, 0.07), parent=head, loc=(0, -0.36, 0.0), bevel=0.01)
+    for s, sn in SIDES:
+        loft("tusk", bone, [(0.0, 0.045, 0.045), (0.2, 0.0, 0.0)], n=6, parent=head, loc=(s * 0.15, -0.39, 0.0))
+        arm = pivot("arm_" + sn, (s * 0.8, 0.0, 0.62))
+        ball("shoulder", bronze if s < 0 else clay, 0.24, parent=arm)
+        loft("upper", clay, [(0.0, 0.18, 0.18), (-0.5, 0.15, 0.15)], n=12, parent=arm)
+        loft("forearm", clay, [(-0.5, 0.15, 0.15), (-0.95, 0.19, 0.19)], n=12, parent=arm)
+        loft("band", bronze, [(-0.82, 0.19, 0.19), (-0.92, 0.2, 0.2)], n=12, parent=arm)
+        rock("fist", clay, 0.21, seed=2, rough=0.06, parent=arm, loc=(0, 0, -1.04))
+        leg = pivot("leg_" + sn, (s * 0.3, 0.0, -0.55))
+        loft("thigh", clay, [(0.05, 0.26, 0.26), (-0.5, 0.2, 0.2), (-0.85, 0.24, 0.24)], n=14, parent=leg)
+        loft("foot", dark, [(-0.1, 0.24, 0.1, 3.0), (0.3, 0.26, 0.1, 3.0), (0.44, 0.16, 0.06, 3.0)], n=14, parent=leg, loc=(0, 0.0, -0.85), rot=(90, 0, 0))
+    club = pivot("club", (0, -0.05, -1.04), parent=bpy.data.objects["arm_r"], rot=(62, 0, 0))
+    loft("club", mat("7a5a3a", 0.7), [(-0.2, 0.06, 0.06), (0.5, 0.1, 0.1), (1.0, 0.2, 0.2), (1.1, 0.12, 0.12)], n=10, parent=club)
+    for i in range(5):
+        a = i * 1.26
+        strut("stud", bone, (math.cos(a) * 0.15, math.sin(a) * 0.15, 0.7 + (i % 2) * 0.2), (math.cos(a) * 0.3, math.sin(a) * 0.3, 0.72 + (i % 2) * 0.2), 0.04, 0.0, n=6, parent=club)
+    return 3.8, 0.1
+
+
+# --- The Oort Cloud Collective: ice and crystal, all of one mind ----------------------------------
+
+OORT_BLUE = ("2f6bff", 0.04, 0.3, 0.0, 0.45)
+OORT_HEART = ("ff2d3d", 0.2, 0.0, 3.0)
+OORT_ICE = ("dff4ff", 0.15, 0.2)
+OORT_SEAM = ("bfe0ff", 0.1, 0.0, 2.5)
+
+
+def alien_cube():
+    """A cube of blue ice in a white frame, balanced on one corner around a red heart."""
+    ice = mat(*OORT_ICE)
+    turn = pivot("turn", (0, 0, 0), parent=pivot("tip", (0, 0, 0), rot=(54.74, 0, 0)), rot=(0, 0, 45))
+    h = 0.46
+    box("block", mat(*OORT_BLUE), (h * 1.9, h * 1.9, h * 1.9), parent=turn, bevel=0.0)
+    for axis in range(3):
+        for u in (-h, h):
+            for v in (-h, h):
+                at = [u, v]
+                at.insert(axis, 0.0)
+                size = [0.085, 0.085]
+                size.insert(axis, h * 2.0 + 0.085)
+                box("bar", ice, tuple(size), parent=turn, loc=tuple(at), bevel=0.01)
+    ball("heart", mat(*OORT_HEART), 0.2)
+    hoop("halo", mat(*OORT_SEAM), 0.9, 0.94, 0.03, n=24, rot=(78, 0, 0))
+    return 2.4, 0.0
+
+
+def alien_shard():
+    """A long splinter of the comet, falling point first with lesser splinters round it."""
+    blue = mat(*OORT_BLUE)
+    loft("spike", blue, [(-1.05, 0.0, 0.0), (-0.3, 0.2, 0.2), (0.35, 0.24, 0.24), (0.6, 0.0, 0.0)], n=6, sharp=5.0)
+    loft("seam", mat(*OORT_SEAM), [(0.34, 0.245, 0.245), (0.365, 0.245, 0.245)], n=6, sharp=5.0)
+    ball("heart", mat(*OORT_HEART), 0.11, loc=(0, 0, 0.1))
+    for i in range(3):
+        a = math.radians(i * 120.0 + 90.0)
+        crystal("splinter", mat(*OORT_ICE), 0.55, 0.08, loc=(math.cos(a) * 0.34, math.sin(a) * 0.34, 0.25), rot=toward((math.cos(a) * 0.25, math.sin(a) * 0.25, -1.0)))
+    lathe("tail", mat(*OORT_SEAM), [(0.15, 0.5), (0.1, 0.85), (0.0, 1.15)], n=6, bevel=0.0)
+    return 2.4, 0.05
+
+
+def alien_cluster():
+    """A geode: a lump of dark comet rock with crystals bursting out of it. It shatters into two chips."""
+    rock("geode", mat("3a3f4c", 0.7), 0.42, seed=7)
+    paints = (mat("8a5cff", 0.08, 0.3), mat("2f6bff", 0.08, 0.3), mat(*OORT_ICE))
+    for i, d in enumerate(around(13)):
+        if d.y < -0.8:
+            continue
+        crystal("crystal", paints[i % 3], 0.34 + 0.3 * ((i * 7) % 5) / 4.0, 0.11, loc=d * 0.28, rot=toward(d))
+    ball("heart", mat(*OORT_HEART), 0.15, loc=(0, -0.36, 0.0))
+    return 2.2, 0.0
+
+
+def alien_chip():
+    """What a geode shatters into: one small crystal."""
+    loft("chip", mat("8a5cff", 0.08, 0.3), [(-0.42, 0.0, 0.0), (0.0, 0.2, 0.2), (0.42, 0.0, 0.0)], n=6, sharp=5.0)
+    loft("seam", mat(*OORT_SEAM), [(-0.012, 0.204, 0.204), (0.012, 0.204, 0.204)], n=6, sharp=5.0)
+    return 1.2, 0.0
+
+
+def alien_strider():
+    """The Collective's kaiju: the great crystal carried over the rooftops on four legs of ice."""
+    ice = mat(*OORT_ICE)
+    loft("crystal", mat(*OORT_BLUE), [(-0.35, 0.0, 0.0), (0.45, 0.8, 0.8), (1.25, 0.0, 0.0)], n=4, sharp=5.0)
+    loft("seam", mat(*OORT_SEAM), [(0.44, 0.806, 0.806), (0.46, 0.806, 0.806)], n=4, sharp=5.0)
+    ball("heart", mat(*OORT_HEART), 0.2, loc=(0, 0, 0.45))
+    for name, s, y in (("leg_l", -1.0, -0.25), ("leg_r", 1.0, -0.25), ("arm_l", -1.0, 0.3), ("arm_r", 1.0, 0.3)):
+        leg = pivot(name, (s * 0.3, y, 0.15))
+        knee = (s * 0.55, y * 0.6, 0.55)
+        strut("thigh", ice, (0, 0, 0), knee, 0.1, 0.07, n=4, parent=leg, sharp=5.0)
+        ball("knee", mat(*OORT_SEAM), 0.09, parent=leg, loc=knee)
+        strut("shin", ice, knee, (s * 0.85, y * 1.4, -1.65), 0.09, 0.0, n=4, parent=leg, sharp=5.0)
+    return 3.8, 0.0
+
+
+# --- From deep space: the messengers --------------------------------------------------------------
+
+BONE = ("f2f2ee", 0.45)
+CORE = ("ff2d3d", 0.2, 0.0, 3.0)
+
+
+def alien_orb():
+    """A perfect ball in black and white stripes under a thin halo. It has no face and makes no sound."""
+    turn = pivot("turn", (0, 0, 0), rot=(24, 18, 0))
+    banded("stripe", (mat("0c0c10", 0.25), mat("f2f2ee", 0.25)), 0.7, [-90, -70, -50, -30, -10, 10, 30, 50, 70, 90], parent=turn)
+    hoop("halo", mat("fff6d8", 0.2, 0.0, 3.0), 0.5, 0.56, 0.03, loc=(0, 0, 0.92), rot=(12, 0, 0))
+    return 2.2, 0.1
+
+
+def alien_eye():
+    """A great orange eye with a lesser eye on each outstretched lobe. It watches the robot."""
+    flesh = mat("ff9a2a", 0.4)
+    edge = mat("ffd21f", 0.4)
+    ball("disc", flesh, (0.6, 0.22, 0.6))
+    hoop("iris_ring", edge, 0.44, 0.52, 0.05, loc=(0, -0.17, 0), rot=(90, 0, 0))
+    for s, _ in SIDES:
+        loft("lobe", flesh, [(0.3, 0.4, 0.16), (0.72, 0.26, 0.12), (1.0, 0.33, 0.12), (1.25, 0.0, 0.0)], n=14, rot=(0, s * 90.0, 0), sharp=80)
+        eyeball(None, (s * 0.95, -0.1, 0.0), 0.15, "2a8fff")
+        for i in range(3):
+            strut("lash", edge, (s * (0.62 + i * 0.17), 0, 0.3), (s * (0.66 + i * 0.2), 0, 0.5), 0.035, 0.0, n=6)
+            strut("lash", edge, (s * (0.62 + i * 0.17), 0, -0.3), (s * (0.66 + i * 0.2), 0, -0.5), 0.035, 0.0, n=6)
+    eyeball(pivot("head", (0, 0, 0)), (0, -0.16, 0.0), 0.36, "2a8fff")
+    return 3.0, 0.0
+
+
+def alien_bulwark():
+    """The strongest of them: a great dark bulk with a skull for a face, a red core behind ribs and
+    arms like folded paper."""
+    dark = mat("22252d", 0.5)
+    bone = mat(*BONE)
+    loft("body", dark, [(-0.9, 0.3, 0.26), (-0.5, 0.62, 0.46), (0.2, 0.8, 0.52, 2.6), (0.7, 0.7, 0.46, 2.6), (1.0, 0.36, 0.3)], n=18, sharp=80)
+    loft("belly", mat("ff7a1a", 0.5), [(-0.7, 0.3, 0.08), (-0.4, 0.42, 0.1), (-0.22, 0.3, 0.08)], n=12, loc=(0, -0.4, 0))
+    head = pivot("head", (0, -0.44, 0.62))
+    plate("skull", bone, [(-0.26, 0.3), (0.26, 0.3), (0.3, 0.05), (0.16, -0.12), (0.1, -0.3), (-0.1, -0.3), (-0.16, -0.12), (-0.3, 0.05)], 0.12, parent=head)
+    for s, sn in SIDES:
+        ball("socket", mat("08080c", 0.3), (0.08, 0.05, 0.1), parent=head, loc=(s * 0.13, -0.05, 0.1))
+        ball("glint", mat(*CORE), 0.03, parent=head, loc=(s * 0.13, -0.09, 0.1))
+        for i in range(3):
+            box("rib", bone, (0.34, 0.07, 0.055), loc=(s * 0.27, -0.5, 0.2 - i * 0.15), rot=(0, 0, s * (10.0 + i * 4.0)), bevel=0.015)
+        arm = pivot("arm_" + sn, (s * 0.84, 0.0, 0.55))
+        ball("shoulder", bone, (0.22, 0.2, 0.18), parent=arm)
+        for i in range(3):
+            plate("ribbon", bone, [(-0.15, 0.0), (0.15, 0.0), (0.15, -0.4), (-0.15, -0.4)], 0.03, parent=arm, loc=(0, (0.05 if i % 2 else -0.05), -0.12 - i * 0.38), rot=((14 if i % 2 else -14), 0, 0))
+        leg = pivot("leg_" + sn, (s * 0.3, 0.0, -0.8))
+        loft("leg", dark, [(0.0, 0.2, 0.2), (-0.3, 0.13, 0.13)], n=10, parent=leg)
+        ball("foot", bone, (0.14, 0.18, 0.08), parent=leg, loc=(0, -0.04, -0.34))
+    for i in range(2):
+        box("tooth_row", mat("08080c", 0.3), (0.16, 0.03, 0.02), parent=head, loc=(0, -0.07, -0.18 - i * 0.06), bevel=0.0)
+    ball("core", mat(*CORE), 0.2, loc=(0, -0.46, 0.05))
+    return 3.0, 0.0
+
+
+def alien_stalker():
+    """The deep-space kaiju: tall, thin and long-armed, with no head: a bone mask on its chest over
+    a red core, and bone plates for shoulders."""
+    dark = mat("1f3a34", 0.5)
+    bone = mat(*BONE)
+    loft("torso", dark, [(-0.5, 0.2, 0.16), (0.0, 0.24, 0.18), (0.7, 0.62, 0.3, 2.6), (0.95, 0.5, 0.26, 2.6), (1.05, 0.2, 0.16)], n=18, sharp=80)
+    loft("pelvis", bone, [(-0.56, 0.16, 0.14), (-0.42, 0.26, 0.2), (-0.32, 0.2, 0.17)], n=12)
+    head = pivot("head", (0, -0.27, 0.9))
+    plate("mask", bone, [(-0.2, 0.2), (0.0, 0.26), (0.2, 0.2), (0.22, -0.02), (0.06, -0.14), (0.0, -0.36), (-0.06, -0.14), (-0.22, -0.02)], 0.08, parent=head)
+    ball("core", mat(*CORE), 0.17, loc=(0, -0.24, 0.38))
+    for s, sn in SIDES:
+        ball("socket", mat("08080c", 0.3), (0.06, 0.04, 0.06), parent=head, loc=(s * 0.1, -0.04, 0.07))
+        for i in range(3):
+            box("rib", bone, (0.24, 0.06, 0.045), loc=(s * 0.2, -0.24 + i * 0.012, 0.56 - i * 0.13), rot=(0, 0, s * (16.0 + i * 5.0)), bevel=0.012)
+        ball("pauldron", bone, (0.27, 0.22, 0.2), loc=(s * 0.64, 0, 0.98))
+        arm = pivot("arm_" + sn, (s * 0.7, 0.0, 0.86))
+        loft("upper", dark, [(0.0, 0.1, 0.1), (-0.75, 0.07, 0.07)], n=10, parent=arm)
+        strut("elbow_spike", bone, (0, 0.02, -0.75), (0, 0.3, -0.5), 0.06, 0.0, n=6, parent=arm)
+        loft("forearm", dark, [(-0.75, 0.07, 0.07), (-1.45, 0.09, 0.09)], n=10, parent=arm)
+        for i in range(3):
+            strut("claw", bone, ((i - 1) * 0.07, 0, -1.42), ((i - 1) * 0.11, -0.05, -1.75), 0.035, 0.0, n=6, parent=arm)
+        leg = pivot("leg_" + sn, (s * 0.2, 0.0, -0.45))
+        loft("thigh", dark, [(0.0, 0.14, 0.14), (-0.5, 0.1, 0.1)], n=10, parent=leg)
+        ball("knee", bone, 0.11, parent=leg, loc=(0, -0.02, -0.5))
+        loft("shin", dark, [(-0.5, 0.1, 0.1), (-0.95, 0.08, 0.08)], n=10, parent=leg)
+        loft("foot", dark, [(-0.1, 0.14, 0.07, 3.0), (0.3, 0.16, 0.07, 3.0), (0.42, 0.08, 0.04, 3.0)], n=12, parent=leg, loc=(0, 0, -0.98), rot=(90, 0, 0))
+    return 3.8, 0.0
+
+
 MODELS = {
-    "robot": robot, "alien_grunt": alien_grunt, "alien_spitter": alien_spitter, "alien_crab": alien_crab,
-    "alien_saucer": alien_saucer, "alien_diver": alien_diver, "alien_brute": alien_brute,
-    "alien_splitter": alien_splitter, "alien_mite": alien_mite, "alien_boss": alien_boss, "alien_kaiju": alien_kaiju,
-    "alien_prism": alien_prism, "alien_seraph": alien_seraph, "alien_turtle": alien_turtle,
+    "robot": robot, "alien_saucer": alien_saucer, "alien_boss": alien_boss,
+    "alien_grunt": alien_grunt, "alien_crab": alien_crab, "alien_diver": alien_diver, "alien_spitter": alien_spitter, "alien_kaiju": alien_kaiju,
+    "alien_jelly": alien_jelly, "alien_squid": alien_squid, "alien_angler": alien_angler, "alien_urchin": alien_urchin, "alien_polyp": alien_polyp, "alien_turtle": alien_turtle,
+    "alien_hoplite": alien_hoplite, "alien_meteor": alien_meteor, "alien_saturn": alien_saturn, "alien_moon": alien_moon, "alien_brute": alien_brute, "alien_cyclops": alien_cyclops,
+    "alien_cube": alien_cube, "alien_shard": alien_shard, "alien_prism": alien_prism, "alien_cluster": alien_cluster, "alien_chip": alien_chip, "alien_strider": alien_strider,
+    "alien_orb": alien_orb, "alien_seraph": alien_seraph, "alien_eye": alien_eye, "alien_bulwark": alien_bulwark, "alien_stalker": alien_stalker,
 }
 
 

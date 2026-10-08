@@ -94,6 +94,14 @@ var _power := 0.0
 var _pop := 0.0
 ## How far through its run cycle it is.
 var _run := 0.0
+## Standing still: how settled into its stance it is (0 to 1), how long it has stood, and an offset
+## so the three robots do not fidget in step.
+var _still := 0.0
+var _idle_t := 0.0
+var _idle_from := randf() * 5.5
+## Where the nearest alien is from the gun, in range or not, for the head to watch.
+var _watching := false
+var _watch := Vector2.UP
 
 
 func _init() -> void:
@@ -278,9 +286,20 @@ func update(delta: float, firing: bool) -> void:
 	visible = invuln <= 0.0 or fmod(invuln, 0.16) > 0.08
 	var muzzle: float = CHASSIS[chassis].muzzle
 	_cool -= delta
+	# It only shoots at what its gun can reach: with nothing in the ring, everything holds fire
+	var from := Vector2(x + GUN_X, muzzle + y)
+	var target := _target(from) if firing else null
+	_locked = target != null
+	firing = _locked
+	if target != null:
+		_aim = clampf(atan2(target.pos.x - from.x, target.pos.y - from.y), -2.7, 2.7)
+	var near: Alien = game.swarm.nearest(from)
+	_watching = near != null
+	if near != null:
+		_watch = near.pos - from
 	if firing and _cool <= 0.0:
 		_cool = 1.0 / (fire_rate * (2.0 if overdrive > 0.0 else 1.0) * (1.5 if y > 0.0 and jump_level > 1 else 1.0))
-		_fire(muzzle + y)
+		_fire(from, target)
 	if firing and rockets > 0:
 		_rocket_t -= delta
 		if _rocket_t <= 0.0 and game.swarm.toughest() != null:
@@ -335,12 +354,51 @@ func _acrobatics(delta: float) -> void:
 		limbs["knee_" + side].rotation.x = 0.06 + breath * 0.02 + pace * (0.2 + 1.25 * pow(maxf(0.0, -cos(phase)), 1.4))
 	limbs.arm_l.rotation = Vector3(-sin(_run) * 0.9 * pace + breath * 0.03, 0.0, -0.08)
 	limbs.elbow_l.rotation.x = -0.15 - 1.25 * pace
+	# Standing still it does not just stop. It settles into a stance (turned a little, weight on one
+	# leg, free hand on its hip, breathing) and every few seconds it fidgets: checks the blaster,
+	# shades its eyes to scan the sky, or bounces on its toes.
+	var still_now := pace < 0.08 and y <= 0.0 and _dash_t <= 0.0 and _land <= 0.0
+	_still = move_toward(_still, 1.0 if still_now else 0.0, delta * (3.0 if still_now else 8.0))
+	_idle_t = _idle_t + delta if still_now else 0.0
+	var beat := fmod(_idle_t + _idle_from, 5.5) / 2.4
+	var act := -1
+	var fidget := 0.0
+	if _idle_t > 1.2 and beat < 1.0 and not _locked:
+		act = int((_idle_t + _idle_from) / 5.5) % 3
+		fidget = smoothstep(0.0, 0.25, beat) * (1.0 - smoothstep(0.75, 1.0, beat))
+	if _still > 0.0:
+		var bounce := absf(sin(beat * TAU * 1.5)) * fidget if act == 2 else 0.0
+		limbs.leg_l.rotation = limbs.leg_l.rotation.lerp(Vector3(-0.08 - bounce * 0.3, 0.0, -0.13), _still)
+		limbs.leg_r.rotation = limbs.leg_r.rotation.lerp(Vector3(-0.2 - bounce * 0.3, 0.0, 0.1), _still)
+		limbs.knee_l.rotation.x = lerpf(limbs.knee_l.rotation.x, 0.12 + breath * 0.03 + bounce * 0.6, _still)
+		limbs.knee_r.rotation.x = lerpf(limbs.knee_r.rotation.x, 0.38 + breath * 0.03 + bounce * 0.6, _still)
+		# The free hand rests on the hip, elbow out
+		var arm := Vector3(0.25, 0.0, -0.62 + breath * 0.03)
+		var elbow := Vector3(-0.35, 0.0, 1.5)
+		if act == 1:
+			# Hand up to the brow, shading its eyes
+			arm = arm.lerp(Vector3(-2.2, 0.0, -0.55), fidget)
+			elbow = elbow.lerp(Vector3(-2.1, 0.0, 0.5), fidget)
+		elif act == 2:
+			# Shaking the arm loose
+			arm = arm.lerp(Vector3(sin(beat * TAU * 3.0) * 0.25, 0.0, -0.3), fidget)
+			elbow = elbow.lerp(Vector3(-0.4 - absf(sin(beat * TAU * 3.0)) * 0.5, 0.0, 0.0), fidget)
+		limbs.arm_l.rotation = limbs.arm_l.rotation.lerp(arm, _still)
+		limbs.elbow_l.rotation = limbs.elbow_l.rotation.lerp(elbow, _still)
+	else:
+		limbs.elbow_l.rotation.y = 0.0
+		limbs.elbow_l.rotation.z = 0.0
 	# It turns to face the way it is running: side on along a street, its back to us going away
 	var yaw := atan2(_lean, _lean_z + 0.35) * pace + sin(_run) * 0.16 * pace
 	# Hips sway and shoulders counter-turn with each stride
 	var roll := sin(_run) * 0.06 * pace
 	var flip := 0.0
 	var lean := 0.24 * pace
+	if _still > 0.0:
+		var scan := sin(beat * TAU) * 0.35 * fidget if act == 1 else 0.0
+		yaw = lerp_angle(yaw, facing * 0.5 + sin(_idle_t * 0.5) * 0.08 + scan, _still)
+		roll += (0.035 + sin(_idle_t * 0.9) * 0.02) * _still
+		lean += breath * 0.02 * _still
 	if _spin_t > 0.0:
 		_spin_t -= delta
 		yaw += _spin_dir * TAU * ease(1.0 - maxf(_spin_t, 0.0) / SPIN_TIME, -2.0)
@@ -377,18 +435,33 @@ func _acrobatics(delta: float) -> void:
 	var turn := Basis(Vector3.UP, yaw) * Basis(Vector3.BACK, roll) * Basis(Vector3.RIGHT, flip + lean)
 	body.transform = Transform3D(turn, MIDDLE - turn * MIDDLE)
 	# The gun arm: elbow bent, forearm and blaster laid along the line of fire whichever way up the
-	# robot is. With nothing to shoot at it comes down to the ready, across the chest.
+	# robot is. With nothing to shoot at it comes down to the low ready, muzzle at the ground.
 	_arm_aim = lerp_angle(_arm_aim, _aim, 1.0 - exp(-14.0 * delta))
 	_at_ease = move_toward(_at_ease, 0.0 if _locked else 1.0, delta * 3.0)
-	var bend := lerpf(0.7, 1.45, _at_ease) + _recoil * 0.4
-	var line := Vector3(sin(_arm_aim), cos(_arm_aim), 0.15).normalized().slerp(Vector3(-0.3, 0.3, 0.9).normalized(), _at_ease)
+	var bend := lerpf(0.7, 1.2, _at_ease) + _recoil * 0.4
+	var ready := Vector3(facing * 0.5, -0.4, 0.75).normalized()
+	if act == 0:
+		# Checking the blaster: up in front of the face, turned this way and that
+		ready = ready.slerp(Vector3(facing * 0.25 + sin(beat * TAU * 2.0) * 0.12, 0.8, 0.55).normalized(), fidget)
+		bend += 0.6 * fidget
+	var line := Vector3(sin(_arm_aim), cos(_arm_aim), 0.15).normalized().slerp(ready, _at_ease)
 	var at := (turn.inverse() * line).normalized()
 	var raised := Basis(Vector3.RIGHT, PI)
 	var forearm := (raised * Basis(Vector3.RIGHT, -bend) * Vector3.DOWN).normalized()
 	limbs.arm_r.basis = Basis(Quaternion(forearm, at)) * raised
 	limbs.elbow_r.rotation.x = -bend
-	# The head turns to watch what it is shooting at
-	look(at, delta)
+	# The head watches what the gun is on. With nothing in reach it watches the nearest alien
+	# wherever that is, or looks about the sky; it never just stares out at the player.
+	var gaze := line
+	if not _locked:
+		gaze = Vector3(sin(_idle_t * 0.6 + _idle_from) * 0.8, 0.5, 0.5)
+		if _watching:
+			gaze = Vector3(_watch.x, _watch.y, 0.0).normalized() + Vector3(0.0, 0.0, 0.25)
+		if act == 0:
+			gaze = gaze.normalized().slerp(Vector3(facing * 0.3, 0.15, 0.9).normalized(), fidget)
+		elif act == 1:
+			gaze = gaze.normalized().slerp(Vector3(sin(beat * TAU) * 0.9, 0.5, 0.45).normalized(), fidget)
+	look((turn.inverse() * gaze.normalized()).normalized(), delta)
 
 
 ## Sets the wingman up at this level of the Wingman Drills card (0 = as it first arrives).
@@ -437,22 +510,14 @@ func _target(from: Vector2) -> Alien:
 	return found
 
 
-func _fire(muzzle: float) -> void:
+func _fire(from: Vector2, _target_now: Alien) -> void:
 	_recoil = 1.0
-	# It shoots at the nearest alien in range, and straight up when there is none
-	var from := Vector2(x + GUN_X, muzzle)
-	var target := _target(from)
-	_locked = target != null
-	_aim = 0.0
-	if target != null:
-		var to := target.pos - from
-		_aim = clampf(atan2(to.x, to.y), -2.7, 2.7)
 	for i in barrels:
 		var off := (i - (barrels - 1) * 0.5) * 0.34
 		var ang := _aim + off * 0.16
 		var dart: Shots.Shot = game.shots.fire("bullet", from + Vector2(off, 0.0), Vector2(sin(ang), cos(ang)) * 22.0, damage, pierce, splash)
 		# Fired from a back street, it climbs forward to the plane the aliens hang in
 		dart.depth = z
-		dart.rise_from = muzzle
+		dart.rise_from = from.y
 		dart.position.z = z
 	Sfx.play("shoot", randf_range(0.78, 0.9), -9.0)

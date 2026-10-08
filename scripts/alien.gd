@@ -6,21 +6,46 @@ extends Figure
 enum Mode { FORM, DIVE, FREE, SAUCER, BOSS, GROUND }
 
 ## bomb: chance to actually drop when the swarm picks this alien. hx/hy: half-size of the hit box.
+## spits: aims shots at the robot. dives: breaks formation to dive on it. heavy: one to a row, with
+## a bigger bomb. splits: the kind it bursts into, two of them. loose: no fishing line. walks: lands
+## and stomps (pace is how fast). crash: floors it takes off a building it lands on (4 if not given).
 ## The models are models/alien_<kind>.glb. These are few and large, more kaiju than swarm.
 const TYPES := {
+	# The Venusians: tin toys and little green men
 	"grunt": {"hp": 5, "score": 40, "hx": 0.6, "hy": 1.15, "bomb": 1.0, "color": "8be04e"},
 	"crab": {"hp": 9, "score": 80, "hx": 0.85, "hy": 0.6, "bomb": 0.8, "color": "c9cfd6"},
+	"diver": {"hp": 3, "score": 90, "hx": 0.7, "hy": 0.6, "bomb": 0.3, "dives": true, "crash": 2, "color": "e0263c"},
 	"spitter": {"hp": 7, "score": 100, "hx": 0.6, "hy": 1.15, "bomb": 0.0, "spits": true, "color": "f08ab0"},
-	"diver": {"hp": 3, "score": 90, "hx": 0.7, "hy": 0.6, "bomb": 0.3, "dives": true, "color": "e0263c"},
-	"brute": {"hp": 30, "score": 320, "hx": 1.15, "hy": 1.1, "bomb": 1.0, "color": "aeb6c2"},
-	"splitter": {"hp": 8, "score": 120, "hx": 0.85, "hy": 0.65, "bomb": 0.5, "color": "b9bfca"},
-	"mite": {"hp": 2, "score": 20, "hx": 0.4, "hy": 0.4, "bomb": 0.0, "color": "b9bfca"},
-	"saucer": {"hp": 12, "score": 240, "hx": 1.05, "hy": 0.5, "bomb": 0.0, "color": "c9cfd6"},
-	# spits: aims shots at the robot. dives: breaks formation to dive on it. walks: lands and stomps.
-	"prism": {"hp": 12, "score": 160, "hx": 0.9, "hy": 0.95, "bomb": 0.0, "spits": true, "color": "2f6bff"},
-	"seraph": {"hp": 9, "score": 150, "hx": 0.8, "hy": 1.15, "bomb": 0.4, "dives": true, "color": "f2f2ee"},
 	"kaiju": {"hp": 26, "score": 350, "hx": 1.2, "hy": 1.5, "bomb": 0.0, "walks": true, "pace": 1.2, "color": "5fbf4a"},
+	# The Europans: things from the sea under the ice
+	"jelly": {"hp": 6, "score": 50, "hx": 0.75, "hy": 1.05, "bomb": 1.0, "color": "9fe8ff"},
+	"squid": {"hp": 4, "score": 95, "hx": 0.6, "hy": 0.8, "bomb": 0.3, "dives": true, "crash": 2, "color": "f4e9ff"},
+	"angler": {"hp": 9, "score": 110, "hx": 0.8, "hy": 0.75, "bomb": 0.0, "spits": true, "color": "3b5a8c"},
+	"urchin": {"hp": 9, "score": 120, "hx": 0.8, "hy": 0.8, "bomb": 0.5, "splits": "polyp", "color": "7a4fd0"},
+	"polyp": {"hp": 2, "score": 20, "hx": 0.4, "hy": 0.4, "bomb": 0.0, "loose": true, "crash": 1, "color": "7a4fd0"},
 	"turtle": {"hp": 42, "score": 450, "hx": 1.2, "hy": 1.5, "bomb": 0.0, "walks": true, "pace": 0.75, "color": "7a9a4a"},
+	# The Titans: bronze and stone giants
+	"hoplite": {"hp": 8, "score": 60, "hx": 0.7, "hy": 1.15, "bomb": 1.0, "color": "e0a040"},
+	"meteor": {"hp": 5, "score": 100, "hx": 0.6, "hy": 0.65, "bomb": 0.3, "dives": true, "crash": 3, "color": "ff7a1a"},
+	"saturn": {"hp": 10, "score": 130, "hx": 0.9, "hy": 0.6, "bomb": 0.5, "splits": "moon", "color": "e8b060"},
+	"moon": {"hp": 3, "score": 25, "hx": 0.4, "hy": 0.4, "bomb": 0.0, "loose": true, "crash": 1, "color": "9a9aa8"},
+	"brute": {"hp": 30, "score": 320, "hx": 1.15, "hy": 1.1, "bomb": 1.0, "heavy": true, "crash": 8, "color": "c8823a"},
+	"cyclops": {"hp": 36, "score": 420, "hx": 1.2, "hy": 1.5, "bomb": 0.0, "walks": true, "pace": 1.0, "color": "a8623a"},
+	# The Oort Cloud Collective: ice and crystal
+	"cube": {"hp": 9, "score": 70, "hx": 0.75, "hy": 0.8, "bomb": 1.0, "color": "2f6bff"},
+	"shard": {"hp": 5, "score": 105, "hx": 0.45, "hy": 0.85, "bomb": 0.3, "dives": true, "crash": 2, "color": "bfe0ff"},
+	"prism": {"hp": 12, "score": 160, "hx": 0.9, "hy": 0.95, "bomb": 0.0, "spits": true, "color": "2f6bff"},
+	"cluster": {"hp": 11, "score": 140, "hx": 0.85, "hy": 0.8, "bomb": 0.5, "splits": "chip", "color": "8a5cff"},
+	"chip": {"hp": 3, "score": 25, "hx": 0.35, "hy": 0.42, "bomb": 0.0, "loose": true, "crash": 1, "color": "8a5cff"},
+	"strider": {"hp": 32, "score": 480, "hx": 1.2, "hy": 1.5, "bomb": 0.0, "walks": true, "pace": 1.5, "color": "dff4ff"},
+	# From deep space: the messengers
+	"orb": {"hp": 10, "score": 80, "hx": 0.7, "hy": 0.75, "bomb": 1.0, "color": "f2f2ee"},
+	"seraph": {"hp": 9, "score": 150, "hx": 0.8, "hy": 1.15, "bomb": 0.4, "dives": true, "crash": 2, "color": "f2f2ee"},
+	"eye": {"hp": 12, "score": 170, "hx": 1.1, "hy": 0.6, "bomb": 0.0, "spits": true, "color": "ff9a2a"},
+	"bulwark": {"hp": 38, "score": 380, "hx": 1.1, "hy": 1.1, "bomb": 1.0, "heavy": true, "crash": 8, "color": "f2f2ee"},
+	"stalker": {"hp": 50, "score": 520, "hx": 1.0, "hy": 1.5, "bomb": 0.0, "walks": true, "pace": 1.1, "color": "1f3a34"},
+	# Whoever is invading
+	"saucer": {"hp": 12, "score": 240, "hx": 1.05, "hy": 0.5, "bomb": 0.0, "color": "c9cfd6"},
 	"boss": {"hp": 110, "score": 2000, "hx": 2.7, "hy": 1.0, "bomb": 0.0, "color": "c9cfd6"},
 }
 
@@ -72,8 +97,8 @@ func init(alien_kind: String, hp_scale: float) -> void:
 	hy = def.hy
 	color = Color(def.color)
 	rotation.y = PI * 0.5
-	# Everything hangs from fishing line except the mites and the kaiju, which walks
-	if kind != "mite" and not def.get("walks", false):
+	# Everything hangs from fishing line except the little ones that fall and the kaiju, which walk
+	if not def.get("loose", false) and not def.get("walks", false):
 		_add_line()
 	if kind == "saucer":
 		_add_beam()

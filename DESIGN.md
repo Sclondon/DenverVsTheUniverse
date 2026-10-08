@@ -120,7 +120,8 @@ across it through each park.
   second after touching down. A second finger may rest first and flick later.
 - A dash runs its course before steering takes over again.
 - Jump and dash are there from the start; cards and tech make the jump higher and the dash ready sooner.
-- It shoots the nearest alien inside the faint ring round it, and straight up when there is none.
+- It shoots the nearest alien inside the faint ring round it. With nothing inside the ring it
+  holds its fire, and so do its rockets and gun drones.
   The ring is exactly the gun's reach and does not move with the robot's animation.
 
 ### Rules
@@ -156,6 +157,11 @@ cartwheels through a dash, flips through a jump, and backflips when a wave is be
 the blaster with a bent elbow along the line of fire, lowers it to the ready when there is
 nothing to shoot, and turns its head to watch its target.
 
+Standing still it settles into a stance: turned a little, weight on one leg, free hand on its
+hip, breathing. Every few seconds it fidgets: it checks the blaster, shades its eyes and scans
+the sky, or bounces on its toes. Its head watches the nearest alien wherever that is, never the
+player. The wingmen do the same, out of step with it.
+
 **The wingmen** are two orange copies that steer themselves, one to each side of you. Each
 stands under the alien furthest out on its side and shoots. They keep to the front street. A
 destroyed wingman stays gone for the rest of the game unless rebuilt in the workshop; both return
@@ -169,36 +175,59 @@ Few and large, not a swarm. A wave is a squad or two, plus whatever lands.
 
 **Five invasions of five waves** (`Swarm.INVASIONS`); the last repeats for ever.
 
-| Waves | Invasion | Colours | Ranks, one new each wave | Kaiju |
+Every invasion has figures of its own; none is a recolour of another.
+
+| Waves | Invasion | Look | Ranks, one new each wave | Kaiju |
 | --- | --- | --- | --- | --- |
-| 1-5 | The Venusians | As modelled | Grey, small saucer, rocket, brain Martian | Dinosaur |
-| 6-10 | The Europans | Icy blue | Small saucer, brain Martian, grey, two-headed | Turtle |
-| 11-15 | The Titans | Orange | Tin robot, grey, rocket, two-headed | Dinosaur |
-| 16-20 | The Oort Cloud Collective | Pale violet | Crystal, two-headed, rocket, crystal again | Turtle |
-| 21 on | From deep space | As modelled | Harrier, crystal, tin robot, brain Martian | Dinosaur |
+| 1-5 | The Venusians | Tin toys and little green men | Grey, small saucer, rocket, brain Martian | Dinosaur |
+| 6-10 | The Europans | Things from the sea under the ice | Jellyfish, squid, anglerfish, urchin | Turtle |
+| 11-15 | The Titans | Bronze and stone giants | Hoplite, meteor, ringed planet, Talos | Cyclops |
+| 16-20 | The Oort Cloud Collective | Ice and crystal round a red heart | Ice cube, shard, crystal, geode | Strider |
+| 21 on | From deep space | Black, bone white and a red core | Striped orb, harrier, great eye, bulwark | Stalker |
+
 
 - Until wave 7 a squad is a single row of that wave's newest rank, so wave 2 is all small
   saucers and wave 3 all rockets. From wave 7 there is a second row drawn from the ranks met so far.
-- A tin-robot row is one robot with greys beside it.
+- A heavy (Talos, the bulwark) comes one to a row, with its invasion's first rank beside it.
+- The mothership launches whatever its invasion dives with.
 - The fifth wave of each invasion is the mothership. Wave 5 has it alone; later ones bring squads.
 - One kaiju lands from wave 4, two from wave 9, none on mothership waves.
 
 **The figures** (`Alien.TYPES`). Scrap is points divided by 8, rounded up.
 
-| Figure | Job | Health | Points | Scrap |
+Each invasion fills the same five jobs with its own figures: a bomber, a diver, one that fires
+aimed shots, and either one that bursts in two or a heavy, plus a kaiju.
+
+| Invasion | Figure | Job | Health | Points |
 | --- | --- | --- | --- | --- |
-| Grey in a silver jumpsuit | Basic invader, drops bombs | 5 | 40 | 5 |
-| Small saucer with a pilot | Tougher bomber | 9 | 80 | 10 |
-| Chrome rocket | Breaks formation to dive on the robot | 3 | 90 | 12 |
-| Brain Martian in a cape | Fires aimed shots | 7 | 100 | 13 |
-| Two-headed one | Splits into two small heads (2 health each) when killed | 8 | 120 | 15 |
-| Tin-toy robot | Very tough, drops a bigger bomb | 30 | 320 | 40 |
-| Crystal | A flawless blue eight-sided gem that fires aimed shots | 12 | 160 | 20 |
-| Harrier | White, eyeless, winged, with a two-bladed spear; dives | 9 | 150 | 19 |
-| Abduction saucer | Parks over a building and pulls it apart; drops a supply crate | 12 | 240 | 30 |
-| Dinosaur kaiju | Wind-up toy; stomps after your robot kicking buildings down | 26 | 350 | 44 |
-| Turtle kaiju | Slower and tougher | 42 | 450 | 57 |
-| Mothership | Spreads, divers and a charged death ray | 110 | 2000 | 250 |
+| Venusians | Grey in a silver jumpsuit | Drops bombs | 5 | 40 |
+| | Small saucer with a pilot | Tougher bomber | 9 | 80 |
+| | Chrome rocket | Dives on the robot | 3 | 90 |
+| | Brain Martian in a cape | Fires aimed shots | 7 | 100 |
+| | Dinosaur kaiju | Wind-up toy; stomps after your robot kicking buildings down | 26 | 350 |
+| Europans | Jellyfish with a glass bell | Drops bombs | 6 | 50 |
+| | Torpedo squid | Dives | 4 | 95 |
+| | Anglerfish with a lit lure | Fires aimed shots | 9 | 110 |
+| | One-eyed urchin | Bursts into two polyps (2 health each) | 9 | 120 |
+| | Turtle kaiju | Slow and tough | 42 | 450 |
+| Titans | Hoplite with shield and spear | Drops bombs | 8 | 60 |
+| | Burning meteor with a face | Dives; hits buildings harder | 5 | 100 |
+| | Ringed planet with one eye | Breaks into two moons (3 health each) | 10 | 130 |
+| | Talos, the bronze automaton | Heavy: very tough, bigger bomb | 30 | 320 |
+| | Cyclops kaiju with a club | Middling pace | 36 | 420 |
+| Oort Cloud | Ice cube on its corner | Drops bombs | 9 | 70 |
+| | Shard | Dives | 5 | 105 |
+| | Crystal, a blue eight-sided gem | Fires aimed shots | 12 | 160 |
+| | Geode | Shatters into two chips (3 health each) | 11 | 140 |
+| | Strider: the crystal on four legs of ice | Fast kaiju | 32 | 480 |
+| Deep space | Striped orb under a halo | Drops bombs | 10 | 80 |
+| | Harrier: white, eyeless, winged, with a spear | Dives | 9 | 150 |
+| | Great eye with two lesser eyes | Fires aimed shots | 12 | 170 |
+| | Bulwark: a dark bulk with a skull face and paper arms | Heavy | 38 | 380 |
+| | Stalker: headless, bone mask on its chest | Toughest kaiju | 50 | 520 |
+| All | Abduction saucer | Parks over a building and pulls it apart; drops a supply crate | 12 | 240 |
+| All | Mothership | Spreads, divers and a charged death ray | 110 | 2000 |
+
 
 **Difficulty** (`Swarm.spawn_wave`)
 
@@ -290,9 +319,10 @@ that they keep to the front street.
   (`tests/smoke.gd`) that only uses the front street. The street graph and steering have their
   own test (`tests/roads.gd`). Touch input itself has no test.
 - It has not been run on a phone. Frame rate and touch feel are unmeasured.
-- Invasions two to four are mostly the first invasion's figures in a different colour. Only the
-  crystal, the harrier and the turtle are new models, and the crystal behaves like the brain
-  Martian. The mothership is the same for every invasion.
+- Every invasion has its own models, but they share five behaviours (bomb, dive, aimed shot,
+  split, heavy). The mothership and the abduction saucer are the same for every invasion.
+- Waves past 8 (so every invasion after the first, bar a glimpse of the Europans) have only been
+  run by a test that spawns them, not played.
 - Tech and shop items are existing effects under new names; there is no new mechanic behind them.
 - LoHi is a sign. Union Station cannot be seen from the front street.
 - One mountain-top defense exists, not a family of them.
@@ -307,7 +337,7 @@ that carried on round the ring by itself.
 - **What should a run feel like?** No target has been set for how long a run lasts or what wave
   a good one reaches. The autopilot reaches waves 6 to 10.
 - **Should depth matter in a fight?** Today only kaiju care which street you are on.
-- **Should each invasion have its own mothership and its own behaviours,** not just its own colours?
+- **Should each invasion have its own mothership and its own behaviours,** not just its own figures?
 - **Should tech be new mechanics** (a tractor beam, a ray gun) and not levels of existing upgrades?
 - **How should the wingmen read on a phone** once their hearts, yours and the city are all on screen?
 
