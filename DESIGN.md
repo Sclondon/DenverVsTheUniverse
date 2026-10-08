@@ -121,7 +121,8 @@ across it through each park.
 - A dash runs its course before steering takes over again.
 - Jump and dash are there from the start; cards and tech make the jump higher and the dash ready sooner.
 - It shoots the nearest alien inside the faint ring round it. With nothing inside the ring it
-  holds its fire, and so do its rockets and gun drones.
+  holds its fire, and so do its rockets and gun drones. On a tall screen (a phone held upright) the
+  sky is taller, and every gun reaches further by the same amount.
   The ring is exactly the gun's reach and does not move with the robot's animation.
 
 ### Rules
@@ -195,8 +196,9 @@ Every invasion has figures of its own; none is a recolour of another.
 
 **The figures** (`Alien.TYPES`). Scrap is points divided by 8, rounded up.
 
-Each invasion fills the same five jobs with its own figures: a bomber, a diver, one that fires
-aimed shots, and either one that bursts in two or a heavy, plus a kaiju.
+Each invasion draws its four ranks from the same five jobs (bomber, diver, aimed shots, one
+that bursts in two, heavy) and adds a kaiju. Which four differs: the Venusians have two bombers
+and neither a splitter nor a heavy; the Titans have both of those and nothing that aims.
 
 | Invasion | Figure | Job | Health | Points |
 | --- | --- | --- | --- | --- |

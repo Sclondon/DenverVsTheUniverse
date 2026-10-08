@@ -132,6 +132,17 @@ func _run() -> void:
 	for i in 40:
 		main.player.update(STEP, true)
 	_check(not main.shots.list.is_empty(), "an alien in range is shot at")
+	# On a phone held upright the sky is much taller: a wingman must still reach the top row
+	var sky: float = main.diorama.play_top
+	main.diorama.play_top = 22.0
+	main.swarm.clear()
+	main.shots.clear()
+	var mate = main.wingmen[0]
+	main.swarm.spawn("grunt", Vector2(mate.x, 21.2))
+	for i in 60:
+		mate.update(STEP, true)
+	_check(not main.shots.list.is_empty(), "a wingman reaches the top row of a tall sky")
+	main.diorama.play_top = sky
 	for kind in ["grunt", "crab", "diver", "spitter", "saucer", "boss"]:
 		_check(seen.has(kind), "saw a %s" % kind)
 	_check(waves.max() >= 5, "autopilot reaches the first mothership")

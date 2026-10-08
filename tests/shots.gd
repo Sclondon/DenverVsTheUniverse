@@ -1,11 +1,12 @@
 extends SceneTree
 ## Screenshots of each part of the game, for checking the look by eye.
-## godot --path . -s tests/shots.gd -- --shots=<dir> [--portrait] [--idle] [--invasions]
+## godot --path . -s tests/shots.gd -- --shots=<dir> [--portrait] [--idle] [--invasions] [--lineup]
 
 var main: Node
 var out := "user://shots"
 var portrait := false
 var idle := false
+var lineup := false
 var invasions := false
 
 
@@ -17,6 +18,8 @@ func _initialize() -> void:
 			portrait = true
 		if arg == "--idle":
 			idle = true
+		if arg == "--lineup":
+			lineup = true
 		if arg == "--invasions":
 			invasions = true
 	DirAccess.make_dir_recursive_absolute(out)
@@ -50,13 +53,53 @@ func _run() -> void:
 			await _snap("wave_%02d" % n)
 		quit()
 		return
+	if lineup:
+		# Each invasion's figures side by side, close up under the table's own lamps
+		main.player.x = -30.0
+		main.player.goal_x = -30.0
+		var cam := Camera3D.new()
+		root.add_child(cam)
+		cam.make_current()
+		var alien_script: GDScript = load("res://scripts/alien.gd")
+		var n := 0
+		for inv: Dictionary in main.swarm.INVASIONS:
+			var kinds: Array = []
+			for kind: String in inv.ranks:
+				kinds.append(kind)
+				if alien_script.TYPES[kind].has("splits"):
+					kinds.append(alien_script.TYPES[kind].splits)
+			kinds.append(inv.kaiju)
+			var row: Array = []
+			for i in kinds.size():
+				var a = alien_script.new()
+				a.init(kinds[i], 1.0)
+				a.pos = Vector2(-48.0 + (i - (kinds.size() - 1) * 0.5) * 3.3, 7.0)
+				a.flip = 1.0
+				a.phase = i * 0.7
+				main.add_child(a)
+				row.append(a)
+			for frame in 40:
+				for a in row:
+					a.animate(0.03)
+				await process_frame
+			cam.global_position = Vector3(-48.0, 7.0, 13.0)
+			cam.look_at(Vector3(-48.0, 7.0, 0.0))
+			cam.fov = 40.0
+			await _snap("lineup_%d" % n)
+			n += 1
+			for a in row:
+				a.queue_free()
+		quit()
+		return
 	if idle:
 		# Far from the aliens, so it has nothing to shoot
 		main.player.x = -55.0
 		main.player.goal_x = -55.0
-		var cam: Camera3D = root.get_camera_3d()
-		for i in 12:
-			await _wait(0.5)
+		var cam := Camera3D.new()
+		root.add_child(cam)
+		cam.make_current()
+		for i in 24:
+			await _wait(0.4)
 			cam.global_position = Vector3(main.player.x + 0.5, 2.6, 9.0)
 			cam.look_at(Vector3(main.player.x + 0.5, 2.4, 0.0))
 			cam.fov = 40.0

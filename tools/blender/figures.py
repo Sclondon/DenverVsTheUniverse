@@ -1031,7 +1031,7 @@ def alien_bulwark():
     bone = mat(*BONE)
     loft("body", dark, [(-0.9, 0.3, 0.26), (-0.5, 0.62, 0.46), (0.2, 0.8, 0.52, 2.6), (0.7, 0.7, 0.46, 2.6), (1.0, 0.36, 0.3)], n=18, sharp=80)
     loft("belly", mat("ff7a1a", 0.5), [(-0.7, 0.3, 0.08), (-0.4, 0.42, 0.1), (-0.22, 0.3, 0.08)], n=12, loc=(0, -0.4, 0))
-    head = pivot("head", (0, -0.44, 0.62))
+    head = pivot("face", (0, -0.44, 0.62))  # not "head": a flat mask must not turn to look
     plate("skull", bone, [(-0.26, 0.3), (0.26, 0.3), (0.3, 0.05), (0.16, -0.12), (0.1, -0.3), (-0.1, -0.3), (-0.16, -0.12), (-0.3, 0.05)], 0.12, parent=head)
     for s, sn in SIDES:
         ball("socket", mat("08080c", 0.3), (0.08, 0.05, 0.1), parent=head, loc=(s * 0.13, -0.05, 0.1))
@@ -1058,7 +1058,7 @@ def alien_stalker():
     bone = mat(*BONE)
     loft("torso", dark, [(-0.5, 0.2, 0.16), (0.0, 0.24, 0.18), (0.7, 0.62, 0.3, 2.6), (0.95, 0.5, 0.26, 2.6), (1.05, 0.2, 0.16)], n=18, sharp=80)
     loft("pelvis", bone, [(-0.56, 0.16, 0.14), (-0.42, 0.26, 0.2), (-0.32, 0.2, 0.17)], n=12)
-    head = pivot("head", (0, -0.27, 0.9))
+    head = pivot("face", (0, -0.27, 0.9))  # not "head": a flat mask must not turn to look
     plate("mask", bone, [(-0.2, 0.2), (0.0, 0.26), (0.2, 0.2), (0.22, -0.02), (0.06, -0.14), (0.0, -0.36), (-0.06, -0.14), (-0.22, -0.02)], 0.08, parent=head)
     ball("core", mat(*CORE), 0.17, loc=(0, -0.24, 0.38))
     for s, sn in SIDES:

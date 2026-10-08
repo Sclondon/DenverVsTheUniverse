@@ -70,6 +70,8 @@ var facing := 1.0
 var _vy := 0.0
 ## How far the gun can pick out a target, and the angle it is turned to (0 = straight up).
 var aim_range := 17.0
+## The reach before the table is taken into account: a tall sky (a phone held upright) adds to it.
+var _reach := 17.0
 var _aim := 0.0
 var _arm_aim := 0.0
 var _dash_t := 0.0
@@ -97,8 +99,14 @@ var _run := 0.0
 ## Standing still: how settled into its stance it is (0 to 1), how long it has stood, and an offset
 ## so the three robots do not fidget in step.
 var _still := 0.0
-var _idle_t := 0.0
 var _idle_from := randf() * 5.5
+## The fidget it is in the middle of (-1 for none), how far into it, how much of it shows (eased in
+## and out, 0 to 1), how long until the next, and how many it has done.
+var _act := -1
+var _act_t := 0.0
+var _fidget := 0.0
+var _rest := 1.2 + randf() * 2.5
+var _acts := randi() % 3
 ## Where the nearest alien is from the gun, in range or not, for the head to watch.
 var _watching := false
 var _watch := Vector2.UP
@@ -172,7 +180,8 @@ func apply(levels: Dictionary) -> void:
 	rockets = int(levels.get("rockets", 0))
 	# Every robot can dash and jump from the start; the cards and tech make them better
 	dash_level = 1 + int(levels.get("dash", 0))
-	aim_range = 17.0 + 4.0 * int(levels.get("radar", 0))
+	_reach = 17.0 + 4.0 * int(levels.get("radar", 0))
+	aim_range = _reach
 	jump_level = 1 + int(levels.get("jump", 0))
 	var drones := int(levels.get("drone", 0))
 	while _drones.size() > drones:
@@ -286,6 +295,8 @@ func update(delta: float, firing: bool) -> void:
 	visible = invuln <= 0.0 or fmod(invuln, 0.16) > 0.08
 	var muzzle: float = CHASSIS[chassis].muzzle
 	_cool -= delta
+	# On a tall table the top row hangs higher, so the gun reaches that much further
+	aim_range = _reach + maxf(0.0, game.diorama.play_top - 14.0)
 	# It only shoots at what its gun can reach: with nothing in the ring, everything holds fire
 	var from := Vector2(x + GUN_X, muzzle + y)
 	var target := _target(from) if firing else null
@@ -300,8 +311,8 @@ func update(delta: float, firing: bool) -> void:
 	if firing and _cool <= 0.0:
 		_cool = 1.0 / (fire_rate * (2.0 if overdrive > 0.0 else 1.0) * (1.5 if y > 0.0 and jump_level > 1 else 1.0))
 		_fire(from, target)
+	_rocket_t = maxf(0.0, _rocket_t - delta)
 	if firing and rockets > 0:
-		_rocket_t -= delta
 		if _rocket_t <= 0.0 and game.swarm.toughest() != null:
 			_rocket_t = [3.5, 3.5, 2.6, 1.8][rockets]
 			var m: Shots.Shot = game.shots.fire("missile", Vector2(x, 4.0), Vector2(randf_range(-4.0, 4.0), 9.0), 3.0, 0, 1.0)
@@ -353,19 +364,32 @@ func _acrobatics(delta: float) -> void:
 		limbs["leg_" + side].rotation = Vector3(sin(phase) * 0.95 * pace, 0.0, 0.0)
 		limbs["knee_" + side].rotation.x = 0.06 + breath * 0.02 + pace * (0.2 + 1.25 * pow(maxf(0.0, -cos(phase)), 1.4))
 	limbs.arm_l.rotation = Vector3(-sin(_run) * 0.9 * pace + breath * 0.03, 0.0, -0.08)
-	limbs.elbow_l.rotation.x = -0.15 - 1.25 * pace
+	limbs.elbow_l.rotation = Vector3(-0.15 - 1.25 * pace, 0.0, 0.0)
 	# Standing still it does not just stop. It settles into a stance (turned a little, weight on one
 	# leg, free hand on its hip, breathing) and every few seconds it fidgets: checks the blaster,
-	# shades its eyes to scan the sky, or bounces on its toes.
+	# shades its eyes to scan the sky, or bounces on its toes. A fidget eases in and out, and is
+	# dropped at once (but smoothly) when it moves or finds something to shoot.
 	var still_now := pace < 0.08 and y <= 0.0 and _dash_t <= 0.0 and _land <= 0.0
 	_still = move_toward(_still, 1.0 if still_now else 0.0, delta * (3.0 if still_now else 8.0))
-	_idle_t = _idle_t + delta if still_now else 0.0
-	var beat := fmod(_idle_t + _idle_from, 5.5) / 2.4
-	var act := -1
-	var fidget := 0.0
-	if _idle_t > 1.2 and beat < 1.0 and not _locked:
-		act = int((_idle_t + _idle_from) / 5.5) % 3
-		fidget = smoothstep(0.0, 0.25, beat) * (1.0 - smoothstep(0.75, 1.0, beat))
+	var free := still_now and not _locked
+	if _act < 0:
+		_rest = _rest - delta if free else maxf(_rest, 1.2)
+		if _rest <= 0.0:
+			_act = _acts % 3
+			_acts += 1
+			_act_t = 0.0
+	else:
+		_act_t += delta
+		var ending := not free or _act_t > 2.0
+		_fidget = move_toward(_fidget, 0.0 if ending else 1.0, delta * (3.0 if free else 7.0))
+		if ending and _fidget <= 0.0:
+			_act = -1
+			_rest = 3.0
+	var act := _act
+	var fidget := smoothstep(0.0, 1.0, _fidget)
+	var beat := _act_t / 2.4
+	# A clock that never starts again, so the slow sways do not jump
+	var now := Time.get_ticks_msec() * 0.001 + _idle_from
 	if _still > 0.0:
 		var bounce := absf(sin(beat * TAU * 1.5)) * fidget if act == 2 else 0.0
 		limbs.leg_l.rotation = limbs.leg_l.rotation.lerp(Vector3(-0.08 - bounce * 0.3, 0.0, -0.13), _still)
@@ -385,9 +409,6 @@ func _acrobatics(delta: float) -> void:
 			elbow = elbow.lerp(Vector3(-0.4 - absf(sin(beat * TAU * 3.0)) * 0.5, 0.0, 0.0), fidget)
 		limbs.arm_l.rotation = limbs.arm_l.rotation.lerp(arm, _still)
 		limbs.elbow_l.rotation = limbs.elbow_l.rotation.lerp(elbow, _still)
-	else:
-		limbs.elbow_l.rotation.y = 0.0
-		limbs.elbow_l.rotation.z = 0.0
 	# It turns to face the way it is running: side on along a street, its back to us going away
 	var yaw := atan2(_lean, _lean_z + 0.35) * pace + sin(_run) * 0.16 * pace
 	# Hips sway and shoulders counter-turn with each stride
@@ -395,9 +416,9 @@ func _acrobatics(delta: float) -> void:
 	var flip := 0.0
 	var lean := 0.24 * pace
 	if _still > 0.0:
-		var scan := sin(beat * TAU) * 0.35 * fidget if act == 1 else 0.0
-		yaw = lerp_angle(yaw, facing * 0.5 + sin(_idle_t * 0.5) * 0.08 + scan, _still)
-		roll += (0.035 + sin(_idle_t * 0.9) * 0.02) * _still
+		var scan := sin(beat * TAU) * 0.2 * fidget if act == 1 else 0.0
+		yaw = lerp_angle(yaw, facing * 0.4 + sin(now * 0.5) * 0.08 + scan, _still)
+		roll += (0.035 + sin(now * 0.9) * 0.02) * _still
 		lean += breath * 0.02 * _still
 	if _spin_t > 0.0:
 		_spin_t -= delta
@@ -435,15 +456,15 @@ func _acrobatics(delta: float) -> void:
 	var turn := Basis(Vector3.UP, yaw) * Basis(Vector3.BACK, roll) * Basis(Vector3.RIGHT, flip + lean)
 	body.transform = Transform3D(turn, MIDDLE - turn * MIDDLE)
 	# The gun arm: elbow bent, forearm and blaster laid along the line of fire whichever way up the
-	# robot is. With nothing to shoot at it comes down to the low ready, muzzle at the ground.
+	# robot is. With nothing to shoot at it comes down to the low ready, muzzle at the ground beside its leg.
 	_arm_aim = lerp_angle(_arm_aim, _aim, 1.0 - exp(-14.0 * delta))
 	_at_ease = move_toward(_at_ease, 0.0 if _locked else 1.0, delta * 3.0)
-	var bend := lerpf(0.7, 1.2, _at_ease) + _recoil * 0.4
-	var ready := Vector3(facing * 0.5, -0.4, 0.75).normalized()
+	var bend := lerpf(0.7, 0.5, _at_ease) + _recoil * 0.4
+	var ready := Vector3(0.3, -0.85, 0.45).normalized()
 	if act == 0:
 		# Checking the blaster: up in front of the face, turned this way and that
 		ready = ready.slerp(Vector3(facing * 0.25 + sin(beat * TAU * 2.0) * 0.12, 0.8, 0.55).normalized(), fidget)
-		bend += 0.6 * fidget
+		bend += 0.9 * fidget
 	var line := Vector3(sin(_arm_aim), cos(_arm_aim), 0.15).normalized().slerp(ready, _at_ease)
 	var at := (turn.inverse() * line).normalized()
 	var raised := Basis(Vector3.RIGHT, PI)
@@ -454,7 +475,7 @@ func _acrobatics(delta: float) -> void:
 	# wherever that is, or looks about the sky; it never just stares out at the player.
 	var gaze := line
 	if not _locked:
-		gaze = Vector3(sin(_idle_t * 0.6 + _idle_from) * 0.8, 0.5, 0.5)
+		gaze = Vector3(sin(now * 0.6) * 0.8, 0.5, 0.5)
 		if _watching:
 			gaze = Vector3(_watch.x, _watch.y, 0.0).normalized() + Vector3(0.0, 0.0, 0.25)
 		if act == 0:
@@ -472,7 +493,8 @@ func enlist(level: int) -> void:
 	fire_rate = 1.3 + 0.45 * level
 	damage = 1.0 + floorf(level * 0.5)
 	barrels = 2 if level >= 3 else 1
-	aim_range = 14.0 + 2.5 * level
+	_reach = 14.0 + 2.5 * level
+	aim_range = _reach
 	max_hearts = 3
 	_ring.visible = false
 
